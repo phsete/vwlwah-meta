@@ -6,7 +6,7 @@ import math
 d = np.array([1/(1+math.exp(-i)) for i in np.arange(-40, 40, 0.001)])
 f = 8
 N = 100000000
-w = 7
+w = 32
 v = 14
 
 P1F = d**(w-1)
@@ -57,7 +57,7 @@ plt.plot(d, (
         for k in lessList])
     ) * w / N, 'g--')
 
-w=4
+w=3
 P1F = d**(w-1)
 P0F = (1-d)**(w-1)
 PN1F = 1 - P1F
