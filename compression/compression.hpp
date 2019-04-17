@@ -86,22 +86,38 @@ int vlwah (word_type* array, int length, int bits) {
 
     size_converter<word_type> size_conv(array, length, bits);
 
-    word_type max_fill_length = pow(2,bits - 1);
+    word_type max_fill_length = pow(2,bits);
+    long long active_max_fill_length = 1;
     word_type active_zero_fill_length = 0;
     word_type active_one_fill_length = 0;
 
+    // encode active word
     int word_count = 2;
 
     while (size_conv.has_next()) {
         word_type current_word = size_conv.get_next();
         if ((current_word & content_mask) == 0) { // 0-fill
-            word_count += (active_zero_fill_length == 0);
-            ++active_zero_fill_length;
+            // set back max fill length for new fills
+            if (active_zero_fill_length == 0) {
+                active_max_fill_length = 1;
+            }
             active_one_fill_length = 0;
+            ++active_zero_fill_length;
+            if (active_zero_fill_length >= active_max_fill_length) { // new fill word needed
+                ++word_count;
+                active_max_fill_length *= max_fill_length;
+            }
         } else if ((current_word & content_mask) == content_mask) { // 1-fill
-            word_count += (active_one_fill_length == 0);
+            // set back max fill length for new fills
+            if (active_one_fill_length == 0) {
+                active_max_fill_length = 1;
+            }
             active_zero_fill_length = 0;
             ++active_one_fill_length;
+            if (active_one_fill_length >= active_max_fill_length) { // new fill word needed
+                ++word_count;
+                active_max_fill_length *= max_fill_length;
+            }
         } else {
             ++word_count;
             active_zero_fill_length = 0;

@@ -71,4 +71,19 @@ void print_bitwise (word_type word) {
     std::cout << bit_representation << std::endl;
 }
 
+template <class word_type>
+void generate_sequence (word_type* array, RandomProvider<word_type>& rand_provider, int count) {
+    for (int i = 0; i < count; ++i) {
+        array[i] = 0;
+        rand_provider.generate_word(array[i]);
+    }
+}
+
+template <class word_type>
+void print_sequence (word_type* array, int count) {
+    for (int i = 0; i < count; ++i) {
+        print_bitwise<32>(array[i]);
+    }
+}
+
 #endif

@@ -2,36 +2,52 @@
 #include "util.hpp"
 #include "compression.hpp"
 
-template <class word_type>
-void generate_sequence (word_type* array, RandomProvider<word_type>& rand_provider, int count) {
-    for (int i = 0; i < count; ++i) {
-        array[i] = 0;
-        rand_provider.generate_word(array[i]);
-    }
-}
-
-template <class word_type>
-void print_sequence (word_type* array, int count) {
-    for (int i = 0; i < count; ++i) {
-        print_bitwise<32>(array[i]);
-    }
+void print_result (long long input_size, bool markov, int block_size, double density, double clustering, long long output_size) {
+    std::cout << "RESULT";
+    std::cout << "\t" << markov;
+    std::cout << "\t" << input_size;
+    std::cout << "\t" << block_size;
+    std::cout << "\t" << density;
+    std::cout << "\t" << clustering;
+    std::cout << "\t" << output_size;
+    std::cout << std::endl;
 }
 
 int main () {
-    int count = 10;
-    int block_size = 10;
-    double probability = 0.1;
-    double clustering = 3.0;
+    // prepare input array
+    int word_count = 1000000;
+    uint32_t* array = new uint32_t[word_count];
 
-    uint32_t* array = new uint32_t[count];
-    UniformRandom<uint32_t> rand_provider(probability);
-    MarkovRandom<uint32_t> rand_provider2(probability, clustering);
+    // Uniform Random
+    for (int exp = 1; exp <= 20; ++exp) {
+        // generate input
+        double density = pow(0.5, exp);
+        UniformRandom<uint32_t> rand_provider(density);
+        generate_sequence(array, rand_provider, word_count);
 
-    generate_sequence(array, rand_provider2, count);
-    print_sequence(array, count);
-    std::cout << std::endl;
-    int compressed_size = vlwah(array, count, block_size);
-    std::cout << compressed_size * (block_size + 1) << std::endl;
+        // compute compression
+        for (int block_size = 1; block_size <= 31; ++block_size) {
+            int output_size = vlwah(array, word_count, block_size) * (block_size + 1);
+            print_result(word_count * sizeof(array[0]) * 8, false, block_size, density, 0, output_size);
+        }
+    }
+
+    /*
+    // Markov Random
+    for (int exp = 1; exp <= 20; ++exp) {
+        // generate input
+        double density = pow(0.5, exp);
+        double clustering = 5.0;
+        MarkovRandom<uint32_t> rand_provider(density, clustering);
+        generate_sequence(array, rand_provider, word_count);
+
+        // compute compression
+        for (int block_size = 1; block_size <= 31; ++block_size) {
+            int output_size = vlwah(array, word_count, block_size) * (block_size + 1);
+            print_result(word_count * sizeof(array[0]) * 8, true, block_size, density, clustering, output_size);
+        }
+    }
+    */
 
     delete[] array;
 	return 0;
