@@ -24,37 +24,61 @@ def PL(w,d):
 
 w = 32
 
-lessList = [k for k in range(1,math.ceil((math.log((math.floor(N/(w-1))-1),2))/(w-2)) - 1)]
-lessEqualList = [k for k in range(1,math.floor((math.log((math.floor(N/(w-1))-1),2))/(w-2)))]
+lessList = [k for k in range(1,math.ceil((math.log((math.floor(N/(w-1))),2))/(w-2)) - 1)]
+lessEqualList = [k for k in range(1,math.floor((math.log((math.floor(N/(w-1))),2))/(w-2)))]
 plt.plot(d, (
     3
     + (math.floor(N / (w-1) - 1)) * (PL(w,d) + PN0F(w,d) * P0F(w,d) + PN1F(w,d) * P1F(w,d))
-    + sum([(P0F(w,d)**(1+2**(k*(w-2))) + P1F(w,d)**(1+2**(k*(w-2)))) for k in lessEqualList])
+    + sum([(P0F(w,d)**(2**(k*(w-2))) + P1F(w,d)**(2**(k*(w-2)))) for k in lessEqualList])
     + sum([
-        (math.floor(N/(w-1)) - 1 - 2**(k*(w-2))) * (PN0F(w,d) * P0F(w,d)**(1+2**(k*(w-2))) + PN1F(w,d) * P1F(w,d)**(1+2**(k*(w-2))))
+        (math.floor(N/(w-1)) - 2**(k*(w-2))) * (PN0F(w,d) * P0F(w,d)**(2**(k*(w-2))) + PN1F(w,d) * P1F(w,d)**(2**(k*(w-2))))
         for k in lessList])
-    ) * w / N, 'g--')
+    ) * w / N, 'y')
 
 
-w=3
+w=16
 
-lessList = [k for k in range(1,math.ceil((math.log((math.floor(N/(w-1))-1),2))/(w-2)) - 1)]
-lessEqualList = [k for k in range(1,math.floor((math.log((math.floor(N/(w-1))-1),2))/(w-2)))]
-print(4, sep="\n")
-print((math.floor(N / (w-1) - 1)) * (PL(w,d) + PN0F(w,d) * P0F(w,d) + PN1F(w,d) * P1F(w,d)) * w / N)
-print(w / N * sum([(P0F(w,d)**(1+2**(k*(w-2))) + P1F(w,d)**(1+2**(k*(w-2)))) for k in lessEqualList]), sep="\n")
-print(w / N * sum([(math.floor(N/(w-1)) - 1 - 2**(k*(w-2))) * (PN0F(w,d) * P0F(w,d)**(1+2**(k*(w-2))) + PN1F(w,d) * P1F(w,d)**(1+2**(k*(w-2)))) for k in lessList]), sep="\n")
-
+lessList = [k for k in range(1,math.ceil((math.log((math.floor(N/(w-1))),2))/(w-2)) - 1)]
+lessEqualList = [k for k in range(1,math.floor((math.log((math.floor(N/(w-1))),2))/(w-2)))]
 plt.plot(d, (
     3
     + (math.floor(N / (w-1) - 1)) * (PL(w,d) + PN0F(w,d) * P0F(w,d) + PN1F(w,d) * P1F(w,d))
-    + sum([(P0F(w,d)**(1+2**(k*(w-2))) + P1F(w,d)**(1+2**(k*(w-2)))) for k in lessEqualList])
+    + sum([(P0F(w,d)**(2**(k*(w-2))) + P1F(w,d)**(2**(k*(w-2)))) for k in lessEqualList])
     + sum([
-        (math.floor(N/(w-1)) - 1 - 2**(k*(w-2))) * (PN0F(w,d) * P0F(w,d)**(1+2**(k*(w-2))) + PN1F(w,d) * P1F(w,d)**(1+2**(k*(w-2))))
+        (math.floor(N/(w-1)) - 2**(k*(w-2))) * (PN0F(w,d) * P0F(w,d)**(2**(k*(w-2))) + PN1F(w,d) * P1F(w,d)**(2**(k*(w-2))))
         for k in lessList])
-    ) * w / N, 'b--')
+    ) * w / N, 'g')
 
-plt.plot(d, 1+d-d, 'r--')
+
+w=8
+
+lessList = [k for k in range(1,math.ceil((math.log((math.floor(N/(w-1))),2))/(w-2)) - 1)]
+lessEqualList = [k for k in range(1,math.floor((math.log((math.floor(N/(w-1))),2))/(w-2)))]
+plt.plot(d, (
+    3
+    + (math.floor(N / (w-1) - 1)) * (PL(w,d) + PN0F(w,d) * P0F(w,d) + PN1F(w,d) * P1F(w,d))
+    + sum([(P0F(w,d)**(2**(k*(w-2))) + P1F(w,d)**(2**(k*(w-2)))) for k in lessEqualList])
+    + sum([
+        (math.floor(N/(w-1)) - 2**(k*(w-2))) * (PN0F(w,d) * P0F(w,d)**(2**(k*(w-2))) + PN1F(w,d) * P1F(w,d)**(2**(k*(w-2))))
+        for k in lessList])
+    ) * w / N, 'b')
+
+w=4
+
+lessList = [k for k in range(1,math.ceil((math.log((math.floor(N/(w-1))),2))/(w-2)) - 1)]
+lessEqualList = [k for k in range(1,math.floor((math.log((math.floor(N/(w-1))),2))/(w-2)))]
+plt.plot(d, (
+    3
+    + (math.floor(N / (w-1) - 1)) * (PL(w,d) + PN0F(w,d) * P0F(w,d) + PN1F(w,d) * P1F(w,d))
+    + sum([(P0F(w,d)**(2**(k*(w-2))) + P1F(w,d)**(2**(k*(w-2)))) for k in lessEqualList])
+    + sum([
+        (math.floor(N/(w-1)) - 2**(k*(w-2))) * (PN0F(w,d) * P0F(w,d)**(2**(k*(w-2))) + PN1F(w,d) * P1F(w,d)**(2**(k*(w-2))))
+        for k in lessList])
+    ) * w / N, 'r')
+
+
+plt.plot(d, 1+d-d, 'k--')
 plt.xscale('log')
+plt.yscale('log')
 # plt.xscale('logit')
 plt.show()
