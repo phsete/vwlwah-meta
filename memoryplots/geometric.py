@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 t = np.array([10**i for i in np.arange(4, 7, 0.05)])
 
-plt.plot(t, t * 0.5**20 * (1 - 0.5**20)**(t-1), 'k')
+plt.plot(t, 500000 * 0.5**20 * (1 - 0.5**20)**(t-1), 'k')
 plt.plot(t, 1 - (1 - 0.5**20)**(t), 'r')
 
 datapoints = zip(t, t * 0.5**20 * (1 - 0.5**20)**(t-1))
