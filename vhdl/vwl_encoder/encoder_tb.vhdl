@@ -38,9 +38,27 @@ architecture behav of encoder_tb is
         --  The patterns to apply.
         type pattern_array is array (natural range <>) of pattern_type;
         constant patterns : pattern_array :=
-        (("0000", "00000"),
-        ("0000", "00000"),
-        ("0001", "00001"));
+        (("0000", "10001"),
+        ("0000", "10010"),
+        ("0000", "10011"),
+        ("1111", "11001"),
+        ("1111", "11010"),
+        ("1111", "11011"),
+        ("0001", "00001"),
+        ("0010", "00010"),
+        ("0100", "00100"),
+        ("1111", "11001"),
+        ("1111", "11010"),
+        ("1111", "11011"),
+        ("0000", "10001"),
+        ("0000", "10010"),
+        ("0000", "10011"),
+        ("0001", "00001"),
+        ("0010", "00010"),
+        ("0100", "00100"),
+        ("0000", "10001"),
+        ("0000", "10010"),
+        ("0000", "10011"));
         begin
             assert false report "begin of test" severity note;
 
@@ -59,7 +77,7 @@ architecture behav of encoder_tb is
 
                 --  Check the outputs.
                 assert blk_out = patterns(i).blk_out
-                report "bad encoding in literal word" severity error;
+                report "bad encoding in output word" severity error;
             end loop;
 
             assert false report "end of test" severity note;
