@@ -31,7 +31,6 @@ architecture behav of encoder_tb is
         process
         type pattern_type is record
             --  The inputs of the encoder.
-            clk:    std_logic;
             blk_in: std_logic_vector(3 downto 0);
             --  The expected outputs of the encoder.
             blk_out: std_logic_vector(4 downto 0);
@@ -39,20 +38,30 @@ architecture behav of encoder_tb is
         --  The patterns to apply.
         type pattern_array is array (natural range <>) of pattern_type;
         constant patterns : pattern_array :=
-        (('0', "0000", "00000"),
-        ('0', "0001", "00001"));
+        (("0000", "00000"),
+        ("0000", "00000"),
+        ("0001", "00001"));
         begin
+            assert false report "begin of test" severity note;
+
             --  Check each pattern.
             for i in patterns'range loop
                 --  Set the inputs.
-                clk <= patterns(i).clk;
                 blk_in <= patterns(i).blk_in;
+
+                -- simulate the clock
+                clk <= '0';
+                wait for 1 ns;
+                clk <= '1';
+
                 --  Wait for the results.
                 wait for 1 ns;
+
                 --  Check the outputs.
                 assert blk_out = patterns(i).blk_out
                 report "bad encoding in literal word" severity error;
             end loop;
+
             assert false report "end of test" severity note;
             --  Wait forever; this will finish the simulation.
             wait;
