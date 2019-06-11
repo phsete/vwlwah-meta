@@ -7,72 +7,88 @@ entity encoder is
     -- blk_in: next block of size w-1
     -- blk_out: next block of size w-1
     port (
-             clk:        in std_logic;
-             blk_in:     in std_logic_vector(3 downto 0);
-             blk_out_0:  out std_logic_vector(4 downto 0);
-             blk_out_1:  out std_logic_vector(4 downto 0);
-             blk_out_2:  out std_logic_vector(4 downto 0);
-             blk_out_3:  out std_logic_vector(4 downto 0)
+             clk:           in std_logic;
+             blk_in:        in std_logic_vector(3 downto 0);
+             in_empty:      in std_logic;
+             out_full:      in std_logic;
+             blk_out:       out std_logic_vector(4 downto 0);
+             in_rd:         out std_logic;
+             out_wr:        out std_logic
          );
 
-         signal zero_fill_length : unsigned (31 downto 0) := to_unsigned(1, 32); -- fill_length is always 1 ahead
-         signal one_fill_length : unsigned (31 downto 0) := to_unsigned(1, 32); -- fill_length is always 1 ahead
-        
+    signal zero_fill_length: unsigned(31 downto 0) := to_unsigned(0, 32);
+    signal one_fill_length:  unsigned(31 downto 0) := to_unsigned(0, 32);
+
 end encoder;
 
 architecture IMP of encoder is
 
-    function emit_literal (content: std_logic_vector(3 downto 0)) return std_logic_vector is
-        variable output: std_logic_vector(4 downto 0);
-    begin
-        output(4) := '0';
-        output(3 downto 0) := content;
-        return output;
-    end function emit_literal;
-
-    function emit_fill (fill_type: std_logic; length: unsigned; word_no: natural) return std_logic_vector is
-        variable output: std_logic_vector(4 downto 0);
-        variable length_vector: std_logic_vector(31 downto 0);
-        variable lowest_bit_idx: natural;
-    begin
-        length_vector := std_logic_vector(length);
-        lowest_bit_idx := word_no * 3;
-        if length_vector(31 downto lowest_bit_idx) /= (31 downto lowest_bit_idx => '0') then
-            output(4) := '1';
-            output(3) := fill_type;
-            output(2 downto 0) := length_vector(lowest_bit_idx + 2 downto lowest_bit_idx);
-        else
-            output := (others => '0');
-        end if;
-        return output;
-    end function emit_fill;
-
 begin
     process (clk)
+
+        -- writes a literal word to the output buffer
+        procedure emit_literal (content: std_logic_vector(3 downto 0)) is
+                                variable output_word: std_logic_vector(4 downto 0);
+        begin
+            -- determine output representation and write word to output buffer
+            output_word(4) := '0';
+            output_word(3 downto 0) := content;
+            blk_out <= output_word;
+        end procedure;
+
+        -- writes a sequence of fill words to the output buffer
+        procedure emit_fill (fill_type: std_logic; length: unsigned) is
+                             variable length_vector: std_logic_vector(31 downto 0);
+                             variable lowest_bit_idx: natural;
+                             variable output_word: std_logic_vector(4 downto 0);
+        begin
+            length_vector := std_logic_vector(length);
+            for word_no in 0 downto 0 loop
+                lowest_bit_idx := word_no * 3;
+                if length_vector(31 downto lowest_bit_idx) /= (31 downto lowest_bit_idx => '0') then
+                    output_word(4) := '1';
+                    output_word(3) := fill_type;
+                    output_word(2 downto 0) := length_vector(lowest_bit_idx + 2 downto lowest_bit_idx);
+                    blk_out <= output_word;
+                end if;
+            end loop;
+        end procedure;
+
     begin
-        if clk'event and clk='1' then
-            if blk_in = "0000" then
-                -- input is zero fill
-                one_fill_length <= to_unsigned(1, 32); -- set back one fill length
-                blk_out_0 <= emit_fill ('0', zero_fill_length, 0);
-                blk_out_1 <= emit_fill ('0', zero_fill_length, 1);
-                blk_out_2 <= emit_fill ('0', zero_fill_length, 2);
-                blk_out_3 <= emit_fill ('0', zero_fill_length, 3);
+        if (clk'event and clk='1') then
+
+                -- handle input compression
+            if (blk_in = "0000") then
+                    -- input is zero fill, emit previously started one fill first
+                if (one_fill_length /= to_unsigned(0, 32)) then
+                    emit_fill ('1', one_fill_length);
+                    one_fill_length <= to_unsigned(0, 32);
+                end if;
+
                 zero_fill_length <= zero_fill_length + 1;
-            elsif blk_in = "1111" then
-                -- input is one fill
-                zero_fill_length <= to_unsigned(1, 32); -- set back zero fill length
-                blk_out_0 <= emit_fill ('1', one_fill_length, 0);
-                blk_out_1 <= emit_fill ('1', one_fill_length, 1);
-                blk_out_2 <= emit_fill ('1', one_fill_length, 2);
-                blk_out_3 <= emit_fill ('1', one_fill_length, 3);
+            elsif (blk_in = "1111") then
+                    -- input is one fill, emit previously started zero fill first
+                if (zero_fill_length /= to_unsigned(0, 32)) then
+                    emit_fill ('0', zero_fill_length);
+                    zero_fill_length <= to_unsigned(0, 32);
+                end if;
+
                 one_fill_length <= one_fill_length + 1;
             else
-                -- input is literal word
-                zero_fill_length <= to_unsigned(1, 32);
-                one_fill_length <= to_unsigned(1, 32);
-                blk_out_0 <= emit_literal(blk_in);
+                    -- input is literal word, emit previously started fill words first
+                if (zero_fill_length /= to_unsigned(0, 32)) then
+                    emit_fill ('0', zero_fill_length);
+                    zero_fill_length <= to_unsigned(0, 32);
+                elsif (one_fill_length /= to_unsigned(0, 32)) then
+                    emit_fill ('1', one_fill_length);
+                    one_fill_length <= to_unsigned(0, 32);
+                end if;
+
+                    -- now emit current literal word
+                emit_literal(blk_in);
             end if;
+
         end if;
     end process;
+
 end IMP;
