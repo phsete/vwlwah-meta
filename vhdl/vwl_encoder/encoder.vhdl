@@ -34,30 +34,30 @@ begin
     process (clk)
 
         -- writes a literal word to the output buffer
-        impure function emit_literal (content: std_logic_vector(3 downto 0)) return std_logic_vector is
+        function emit_literal (content: std_logic_vector(3 downto 0)) return std_logic_vector is
             variable buf: std_logic_vector(4 downto 0) := "UUUUU";
         begin
             -- determine output representation and write word to output buffer
             buf(4) := '0';
-            buf(3 downto 0) := blk_in;
+            buf(3 downto 0) := content;
             return buf;
         end emit_literal;
 
         -- writes a sequence of fill words to the output buffer
-        procedure emit_fill (fill_type: std_logic; length: unsigned) is
+        function emit_fill (fill_type: std_logic; length: unsigned; word_no: natural) return std_logic_vector is
                              variable length_vector: std_logic_vector(31 downto 0);
                              variable lowest_bit_idx: natural;
+                             variable buf: std_logic_vector(4 downto 0) := "UUUUU";
         begin
             length_vector := std_logic_vector(length);
-            for word_no in 0 downto 0 loop
-                lowest_bit_idx := word_no * 3;
-                if length_vector(31 downto lowest_bit_idx) /= (31 downto lowest_bit_idx => '0') then
-                    output_buffer(4) <= '1';
-                    output_buffer(3) <= fill_type;
-                    output_buffer(2 downto 0) <= length_vector(lowest_bit_idx + 2 downto lowest_bit_idx);
-                end if;
-            end loop;
-        end procedure;
+            lowest_bit_idx := word_no * 3;
+            if length_vector(31 downto lowest_bit_idx) /= (31 downto lowest_bit_idx => '0') then
+                buf(4)          := '1';
+                buf(3)          := fill_type;
+                buf(2 downto 0) := length_vector(lowest_bit_idx + 2 downto lowest_bit_idx);
+            end if;
+            return buf;
+        end emit_fill;
 
     begin
         if (clk'event and clk='1') then
@@ -71,7 +71,7 @@ begin
             elsif (running = '1' and input_available = '1') then        -- ready to read input value
                 if (input_buffer = "0000") then                         -- input is zero fill, emit previously started one fill first
                     if (one_fill_length /= to_unsigned(0, 32)) then
-                        emit_fill ('1', one_fill_length);
+                        output_buffer <= emit_fill('1', one_fill_length, 0);
                         one_fill_length <= to_unsigned(0, 32);
                         in_rd_loc <= '1';
                         out_wr_loc <= '1';
@@ -80,7 +80,7 @@ begin
                     zero_fill_length <= zero_fill_length + 1;
                 elsif (input_buffer = "1111") then                      -- input is one fill, emit previously started zero fill first
                     if (zero_fill_length /= to_unsigned(0, 32)) then
-                        emit_fill ('0', zero_fill_length);
+                        output_buffer <= emit_fill('0', zero_fill_length, 0);
                         zero_fill_length <= to_unsigned(0, 32);
                         in_rd_loc <= '1';
                         out_wr_loc <= '1';
@@ -89,13 +89,13 @@ begin
                     one_fill_length <= one_fill_length + 1;
                 else                                                    -- input is literal word, emit previously started fill words first
                     if (zero_fill_length /= to_unsigned(0, 32)) then
-                        emit_fill ('0', zero_fill_length);
+                        output_buffer <= emit_fill('0', zero_fill_length, 0);
                         zero_fill_length <= to_unsigned(0, 32);
                         literal_buffer <= input_buffer;                 -- backup input for later use
                         in_rd_loc <= '0';
                         out_wr_loc <= '1';
                     elsif (one_fill_length /= to_unsigned(0, 32)) then
-                        emit_fill ('1', one_fill_length);
+                        output_buffer <= emit_fill('1', one_fill_length, 0);
                         one_fill_length <= to_unsigned(0, 32);
                         literal_buffer <= input_buffer;                 -- backup input for later use
                         in_rd_loc <= '0';
@@ -105,6 +105,18 @@ begin
                         in_rd_loc <= '1';
                         out_wr_loc <= '1';
                     end if;
+                end if;
+            elsif (running = '1' and input_available = '0') then
+                if (zero_fill_length /= to_unsigned(0, 32)) then
+                    output_buffer <= emit_fill('0', zero_fill_length, 0);
+                    zero_fill_length <= to_unsigned(0, 32);
+                    in_rd_loc <= '1';
+                    out_wr_loc <= '1';
+                elsif (one_fill_length /= to_unsigned(0, 32)) then
+                    output_buffer <= emit_fill('1', one_fill_length, 0);
+                    one_fill_length <= to_unsigned(0, 32);
+                    in_rd_loc <= '1';
+                    out_wr_loc <= '1';
                 end if;
             end if;
             
