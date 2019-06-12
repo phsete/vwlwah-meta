@@ -35,7 +35,7 @@ architecture behav of encoder_tb is
 
     component input_fifo
         Generic (
-                    constant Addrbreite: natural := 8;
+                    constant Addrbreite: natural := 3;
                     constant Wortbreite: natural := 4
                 );
         Port ( Din   : in  STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
@@ -50,7 +50,7 @@ architecture behav of encoder_tb is
 
     component output_fifo
         Generic (
-                    constant Addrbreite: natural := 8;
+                    constant Addrbreite: natural := 3;
                     constant Wortbreite: natural := 5
                 );
         Port ( Din   : in  STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
@@ -119,55 +119,43 @@ architecture behav of encoder_tb is
         process
         type pattern_type is record
             --  The inputs of the encoder.
-            blk_in: std_logic_vector(3 downto 0);
-            write_enable: std_logic;
-            read_enable: std_logic;
+            outer_input: std_logic_vector(3 downto 0);
+            outer_wr_en: std_logic;
+            outer_rd_en: std_logic;
             --  The expected outputs of the encoder.
-            blk_out: std_logic_vector(4 downto 0);
+            outer_output: std_logic_vector(4 downto 0);
+            outer_empty: std_logic;
         end record;
         --  The patterns to apply.
         type pattern_array is array (natural range <>) of pattern_type;
         constant patterns : pattern_array :=
-        (("1111", '1', '0', "00000"),
-         ("1111", '1', '0', "00000"),
-         ("1111", '1', '0', "00000"),
-         ("0000", '1', '0', "10010"),
-         ("0000", '1', '0', "10001"),
-         ("0000", '1', '0', "00000"),
-         ("0001", '1', '0', "11011"),
-         ("0010", '1', '0', "00001"),
-         ("0100", '1', '0', "00010"),
-         ("1111", '1', '0', "00100"),
-         ("1111", '1', '0', "00000"),
-         ("1111", '1', '0', "00000"),
-         ("0000", '1', '0', "11011"),
-         ("0000", '1', '0', "00000"),
-         ("0000", '1', '0', "00000"),
-         ("0001", '1', '0', "10011"),
-         ("0010", '1', '0', "00001"),
-         ("0100", '1', '0', "00010"),
-         ("0000", '1', '0', "00100"),
-         ("0000", '1', '0', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"),
-         ("0000", '0', '1', "00000"));
+        (("0001", '1', '1', "UUUUU", '1'),
+         ("0010", '1', '1', "UUUUU", '1'),
+         ("0100", '1', '1', "UUUUU", '1'),
+         ("1000", '1', '1', "UUUUU", '0'),
+         ("0000", '0', '1', "00001", '0'),
+         ("0000", '0', '1', "00010", '0'),
+         ("0000", '0', '1', "00100", '0'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'),
+         ("0000", '0', '1', "01000", '1'));
         begin
             assert false report "begin of test" severity note;
 
             --  Check each pattern.
             for i in patterns'range loop
                 --  Set the inputs.
-                blk_in <= patterns(i).blk_in;
+                outer_wr_en <= patterns(i).outer_wr_en;
+                outer_input <= patterns(i).outer_input;
+                outer_rd_en <= patterns(i).outer_rd_en;
 
                 -- simulate the clock
                 outer_clk <= '0';
@@ -178,13 +166,11 @@ architecture behav of encoder_tb is
                 wait for 1 ns;
 
                 --  Check the outputs.
-                --assert empty = patterns(i).empty
-                --report "empty state incorrect in test " & integer'image(i) & ". Expected: " & std_logic'image(patterns(i).empty) & " but found " & std_logic'image(empty) severity error;
+                assert outer_empty = patterns(i).outer_empty
+                report "empty state incorrect in test " & integer'image(i) & ". Expected: " & std_logic'image(patterns(i).outer_empty) & " but found " & std_logic'image(outer_empty) severity error;
 
-                --if (empty = '0') then
-                    --assert blk_out = patterns(i).blk_out
-                    --report "bad encoding in test " & integer'image(i) & ". Expected: " & to_string(patterns(i).blk_out) & " but found " & to_string(blk_out) severity error;
-                --end if;
+                assert outer_output = patterns(i).outer_output
+                report "bad encoding in test " & integer'image(i) & ". Expected: " & to_string(patterns(i).outer_output) & " but found " & to_string(outer_output) severity error;
             end loop;
 
             assert false report "end of test" severity note;

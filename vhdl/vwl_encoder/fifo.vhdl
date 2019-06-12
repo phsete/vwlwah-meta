@@ -28,17 +28,19 @@ architecture Verhalten of FIFO is
     signal empty_loc : std_logic;
 
 begin
-process begin
-    wait until rising_edge(CLK);
-    if (Wr='1' and full_loc='0') then
-        memory(to_integer(wrcnt)) <= unsigned(Din);
-        wrcnt <= wrcnt+1;
-    end if;
-    if (Rd='1' and empty_loc='0') then
-        Dout <= std_logic_vector(memory(to_integer(rdcnt))); -- Adresse getaktet --> BRAM
-        rdcnt <= rdcnt+1;
-    end if;
-end process;
+    process (CLK)
+    begin
+        if (clk'event and clk='1') then
+            if (Wr='1' and full_loc='0') then
+                memory(to_integer(wrcnt)) <= unsigned(Din);
+                wrcnt <= wrcnt+1;
+            end if;
+            if (Rd='1' and empty_loc='0') then
+                Dout <= std_logic_vector(memory(to_integer(rdcnt))); -- Adresse getaktet --> BRAM
+                rdcnt <= rdcnt+1;
+            end if;
+        end if;
+    end process;
 full_loc  <= '1' when rdcnt = wrcnt+1 else '0';
 empty_loc <= '1' when rdcnt = wrcnt   else '0';
 Full  <= full_loc;
