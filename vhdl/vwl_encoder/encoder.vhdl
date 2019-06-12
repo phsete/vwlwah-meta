@@ -208,37 +208,38 @@ begin
                     handle_1F;
                 when W_NONE =>
                     if (input_available = '1') then
-                    -- ready to read input value
-                        if (input_buffer = "0000") then
-                        -- input is zero fill, emit previously started one fill first
-                            if (one_fill_length /= to_unsigned(0, 32)) then
-                                handle_1F_0F;
-                            else
+                        -- ready to read input value
+                        case input_buffer is
+                            when "0000" =>
+                            -- input is zero fill, emit previously started one fill first
+                                if (one_fill_length /= to_unsigned(0, 32)) then
+                                    handle_1F_0F;
+                                else
                                 -- no output yet, count further
-                                zero_fill_length <= zero_fill_length + 1;
-                                num_fill_words <= fill_word_count(zero_fill_length);
-                            end if;
-                        elsif (input_buffer = "1111") then
-                        -- input is one fill, emit previously started zero fill first
-                            if (zero_fill_length /= to_unsigned(0, 32)) then
-                                handle_0F_1F;
-                            else
+                                    num_fill_words <= fill_word_count(zero_fill_length + 1);
+                                    zero_fill_length <= zero_fill_length + 1;
+                                end if;
+                            when "1111" =>
+                            -- input is one fill, emit previously started zero fill first
+                                if (zero_fill_length /= to_unsigned(0, 32)) then
+                                    handle_0F_1F;
+                                else
                                 -- no output yet, count further
-                                one_fill_length <= one_fill_length + 1;
-                                num_fill_words <= fill_word_count(one_fill_length);
-                            end if;
-                        else
+                                    num_fill_words <= fill_word_count(one_fill_length + 1);
+                                    one_fill_length <= one_fill_length + 1;
+                                end if;
+                            when others =>
                             -- input is literal word, emit previously started fill words first
-                            if (zero_fill_length /= to_unsigned(0, 32)) then
-                                handle_0F_L;
-                            elsif (one_fill_length /= to_unsigned(0, 32)) then
-                                handle_1F_L;
-                            else
-                                output_buffer <= emit_literal(input_buffer);
-                                buffer_type <= W_NONE;
-                                out_wr_loc <= '1';
-                            end if;
-                        end if;
+                                if (zero_fill_length /= to_unsigned(0, 32)) then
+                                    handle_0F_L;
+                                elsif (one_fill_length /= to_unsigned(0, 32)) then
+                                    handle_1F_L;
+                                else
+                                    output_buffer <= emit_literal(input_buffer);
+                                    buffer_type <= W_NONE;
+                                    out_wr_loc <= '1';
+                                end if;
+                        end case;
                     elsif (input_available = '0') then
                         if (zero_fill_length /= to_unsigned(0, 32)) then
                             handle_0F;
