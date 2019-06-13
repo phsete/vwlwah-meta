@@ -41,7 +41,7 @@ begin
 
         -- writes a literal word to the output buffer
         function emit_literal (content: std_logic_vector(word_size-2 downto 0)) return std_logic_vector is
-            variable buf: std_logic_vector(word_size-1 downto 0) := "UUUUU";
+            variable buf: std_logic_vector(word_size-1 downto 0);
         begin
             -- determine output representation and write word to output buffer
             buf(word_size-1) := '0';
@@ -53,7 +53,7 @@ begin
         function emit_fill (fill_type: std_logic; length: unsigned; word_no: natural) return std_logic_vector is
             variable length_vector: std_logic_vector(fill_counter_size-1 downto 0);
             variable lowest_bit_idx: natural;
-            variable buf: std_logic_vector(word_size-1 downto 0) := "UUUUU";
+            variable buf: std_logic_vector(word_size-1 downto 0);
         begin
             length_vector := std_logic_vector(length);
             lowest_bit_idx := word_no * 3;
@@ -88,8 +88,7 @@ begin
                 out_wr_loc <= '1';
             else
                 buffer_type <= W_NONE;
-                zero_fill_length <= to_unsigned(0, fill_counter_size);
-                num_fill_words <= 0;
+                zero_fill_length <= to_unsigned(0, fill_counter_size); num_fill_words <= 0;
                 out_wr_loc <= '1';
 
                 -- output done, finally start new one fill
@@ -240,7 +239,7 @@ begin
                                 out_wr_loc <= '1';
                             end if;
                         end if;
-                    elsif (input_available = '0') then
+                    else
                         if (zero_fill_length /= to_unsigned(0, fill_counter_size)) then
                             handle_0F;
                         elsif (one_fill_length /= to_unsigned(0, fill_counter_size)) then
