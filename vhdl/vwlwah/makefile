@@ -1,0 +1,29 @@
+# Do not use make's built-in rules and variables
+# (this increases performance and avoids hard-to-debug behaviour);
+MAKEFLAGS += -r
+
+MODULES=\
+	  fifo \
+	  encoder
+
+TESTBENCH=\
+	  encoder_tb
+
+GHDL_CMD=ghdl
+
+BINDIR=bin
+
+.PHONY: clean
+
+all: compile
+
+run:
+	$(GHDL_CMD) -r $(TESTBENCH)
+
+compile:
+	mkdir -p bin
+	$(GHDL_CMD) -i --workdir=$(BINDIR) --work=work $(addprefix src/,$(addsuffix .vhdl,$(MODULES) $(TESTBENCH)))
+	$(GHDL_CMD) -m --workdir=$(BINDIR) --work=work $(TESTBENCH)
+
+clean:
+	$(GHDL_CMD) --clean --workdir=$(BINDIR)
