@@ -22,6 +22,10 @@ architecture behav of encoder_tb is
 
     -- Declaration of the components that will be instantiated.
     component encoder
+        generic (
+                    constant word_size: natural := 5;
+                    constant fill_counter_size: natural := 32
+                );
         port (
                  clk:           in std_logic;
                  blk_in:        in std_logic_vector(3 downto 0);
@@ -88,7 +92,6 @@ architecture behav of encoder_tb is
     begin
         --  Component instantiation.
         encoder_0: encoder
-        -- THIS IS HOW IT WORKS WITH GENERICS: generic map (WORD_SIZE <= 5)
         port map (clk => outer_clk,
                   blk_in => blk_in,
                   blk_out => blk_out,
