@@ -23,7 +23,7 @@ end decoder;
 
 architecture IMP of decoder is
 
-    type Word is (W_NONE, W_0FILL, W_1FILL);
+    type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
     signal input_fill_length:   unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal output_fill_length:  unsigned(fill_counter_size-1 downto 0) := (others => '0');
@@ -34,6 +34,7 @@ architecture IMP of decoder is
     signal out_wr_loc:          std_logic;
     signal running:             std_logic := '1';
     signal current_type:        Word := W_NONE;
+    signal next_type:           Word := W_NONE;
 
 begin
     process (clk)
@@ -65,6 +66,17 @@ begin
             end loop;
         end procedure;
 
+        function parse_word_type (input_word: std_logic_vector(word_size-1 downto 0)) return Word is
+        begin
+            if input_word(word_size-1) = '0' then
+                return W_LITERAL;
+            elsif input_word(word_size-2) = '0' then
+                return W_0FILL;
+            else
+                return W_1FILL;
+            end if;
+        end parse_word_type;
+
     begin
         if (clk'event and clk='1' and running = '1') then
 
@@ -73,43 +85,51 @@ begin
             case current_type is
                 when W_0FILL =>
                     if input_fill_length = output_fill_length then
-                        current_type <= W_NONE;
+                        current_type <= next_type;
                     else
                         output_buffer <= emit_fill('0');
                         output_fill_length <= output_fill_length + 1;
                         current_type <= W_0FILL;
                         out_wr_loc <= '1';
                     end if;
+                    if (input_available = '1') then
+                        next_word_buffer <= input_buffer;
+                        next_type <= parse_word_type(input_buffer);
+                    end if;
                 when W_1FILL =>
                     if input_fill_length = output_fill_length then
-                        current_type <= W_NONE;
+                        current_type <= next_type;
                     else
                         output_buffer <= emit_fill('1');
                         output_fill_length <= output_fill_length + 1;
                         current_type <= W_1FILL;
                         out_wr_loc <= '1';
                     end if;
-                when W_NONE =>
+                    if (input_available = '1') then
+                        next_word_buffer <= input_buffer;
+                        next_type <= parse_word_type(input_buffer);
+                    end if;
+                when others =>
                     if (input_available = '1') then
                         -- ready to read input value
-                        case input_buffer(word_size-1) is
-                            when '1' =>
-                                case input_buffer(word_size-2) is
-                                    when '0' =>
-                                        output_buffer <= emit_fill('0');
-                                        parse_fill_length(input_buffer);
-                                        output_fill_length <= output_fill_length + 1;
-                                        current_type <= W_0FILL;
-                                        out_wr_loc <= '1';
-                                    when '1' =>
-                                        output_buffer <= emit_fill('1');
-                                        parse_fill_length(input_buffer);
-                                        output_fill_length <= output_fill_length + 1;
-                                        current_type <= W_1FILL;
-                                        out_wr_loc <= '1';
-                                    when others =>
-                                end case;
-                            when '0' =>
+                        case parse_word_type(input_buffer) is
+                            when W_0FILL =>
+                                parse_fill_length(input_buffer);
+                                if input_buffer(word_size-3 downto 0) /= (word_size-3 downto 0 => '0') then
+                                    output_buffer <= emit_fill('0');
+                                    output_fill_length <= output_fill_length + 1;
+                                    current_type <= W_0FILL;
+                                    out_wr_loc <= '1';
+                                end if;
+                            when W_1FILL =>
+                                parse_fill_length(input_buffer);
+                                if input_buffer(word_size-3 downto 0) /= (word_size-3 downto 0 => '0') then
+                                    output_buffer <= emit_fill('1');
+                                    output_fill_length <= output_fill_length + 1;
+                                    current_type <= W_1FILL;
+                                    out_wr_loc <= '1';
+                                end if;
+                            when W_LITERAL =>
                                 input_fill_length <= (others => '0');
                                 output_fill_length <= (others => '0');
                                 output_buffer <= emit_literal(input_buffer);
@@ -117,8 +137,6 @@ begin
                                 out_wr_loc <= '1';
                             when others =>
                         end case;
-                    else
-                        -- output rest of fill
                     end if;
                 end case;
 
