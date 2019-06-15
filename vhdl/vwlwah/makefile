@@ -14,7 +14,7 @@ GHDL_CMD=ghdl
 
 BINDIR=bin
 
-.PHONY: clean
+.PHONY: clean dump
 
 all: compile
 
@@ -25,6 +25,13 @@ compile:
 	mkdir -p bin
 	$(GHDL_CMD) -i --workdir=$(BINDIR) --work=work $(addprefix src/,$(addsuffix .vhdl,$(MODULES) $(TESTBENCH)))
 	$(GHDL_CMD) -m --workdir=$(BINDIR) --work=work $(TESTBENCH)
+
+dump:
+	rm -r dump
+	ghdl -r $(TESTBENCH) --trace-signals > dump
+
+wave:
+	ghdl -r $(TESTBENCH) --vcd=wave
 
 clean:
 	$(GHDL_CMD) --clean --workdir=$(BINDIR)

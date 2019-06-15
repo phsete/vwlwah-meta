@@ -30,7 +30,7 @@ architecture IMP of decoder is
     signal current_word_buffer: std_logic_vector(word_size-1 downto 0);
     signal next_word_buffer:    std_logic_vector(word_size-1 downto 0);
     signal output_buffer:       std_logic_vector(word_size-2 downto 0);
-    signal ready_to_read:       std_logic;
+    signal input_available:     std_logic := '0';
     signal in_rd_loc:           std_logic;
     signal out_wr_loc:          std_logic;
     signal running:             std_logic := '1';
@@ -75,81 +75,73 @@ begin
                 return W_LITERAL;
             elsif input_word(word_size-2) = '0' then
                 return W_0FILL;
-            else
+            elsif input_word(word_size-2) = '1' then
                 return W_1FILL;
+            else
+                return W_NONE;
             end if;
         end parse_word_type;
 
-    begin
-        if (clk'event and clk='1' and running = '1') then
-
-            case current_type is
-                when W_0FILL =>
-                    out_wr_loc <= '1';
-                    if (next_type = W_0FILL) then
-                        output_buffer <= emit_fill('0');
-                        output_fill_length <= output_fill_length + 1;
-                        ready_to_read <= '1';
-                    else
-                        if (parse_fill_length(input_fill_length, current_word_buffer) - output_fill_length > 1) then
-                            output_buffer <= emit_fill('0');
-                            output_fill_length <= output_fill_length + 1;
-                            ready_to_read <= '0'; -- wait with next read until emission of this fill is completed
-                        elsif (parse_fill_length(input_fill_length, current_word_buffer) - output_fill_length = 1) then
-                            output_buffer <= emit_fill('0');
-                            input_fill_length <= (others => '0');
-                            output_fill_length <= (others => '0');
-                            ready_to_read <= '1';
-                        end if;
-                    end if;
-                    input_fill_length <= parse_fill_length(input_fill_length, current_word_buffer);
-
-                when W_1FILL =>
-                    out_wr_loc <= '1';
-                    if (next_type = W_1FILL) then
-                        output_buffer <= emit_fill('1');
-                        output_fill_length <= output_fill_length + 1;
-                        ready_to_read <= '1';
-                    else
-                        if (parse_fill_length(input_fill_length, current_word_buffer) - output_fill_length > 1) then
-                            output_buffer <= emit_fill('1');
-                            output_fill_length <= output_fill_length + 1;
-                            ready_to_read <= '0'; -- wait with next read until emission of this fill is completed
-                        elsif (parse_fill_length(input_fill_length, current_word_buffer) - output_fill_length = 1) then
-                            output_buffer <= emit_fill('1');
-                            input_fill_length <= (others => '0');
-                            output_fill_length <= (others => '0');
-                            ready_to_read <= '1';
-                        end if;
-                    end if;
-                    input_fill_length <= parse_fill_length(input_fill_length, current_word_buffer);
-
-                when W_LITERAL =>
+        procedure handle_F (fill_type: std_logic) is
+        begin
+            out_wr_loc <= '1';
+            if (next_type = current_type) then
+                output_buffer <= emit_fill(fill_type);
+                output_fill_length <= output_fill_length + 1;
+                in_rd_loc <= '1';
+            else
+                output_buffer <= emit_fill(fill_type);
+                if (input_fill_length - output_fill_length > 1) then
+                    output_fill_length <= output_fill_length + 1;
+                    in_rd_loc <= '0'; -- wait with next read until emission of this fill is completed
+                elsif (input_fill_length - output_fill_length = 1) then
                     input_fill_length <= (others => '0');
                     output_fill_length <= (others => '0');
-                    output_buffer <= emit_literal(current_word_buffer);
-                    out_wr_loc <= '1';
-                    ready_to_read <= '1';
+                    in_rd_loc <= '1';
+                end if;
+            end if;
+
+        end procedure;
+
+        procedure handle_L is
+        begin
+            input_fill_length <= (others => '0');
+            output_fill_length <= (others => '0');
+            output_buffer <= emit_literal(current_word_buffer);
+            out_wr_loc <= '1';
+            in_rd_loc <= '1';
+        end procedure;
+
+    begin
+        if (clk'event and clk='1' and running = '1') then
+            case current_type is
+                when W_0FILL =>
+                    handle_F('0');
+                when W_1FILL =>
+                    handle_F('1');
+                when W_LITERAL =>
+                    handle_L;
                 when others =>
                     out_wr_loc <= '0';
-                    ready_to_read <= '1';
+                    in_rd_loc <= '1';
             end case;
-        end if;
 
-        if (ready_to_read = '1' and in_empty = '0') then
-            in_rd_loc <= '1';
-        else
-            in_rd_loc <= '0';
+            input_available <= not(in_empty);
         end if;
 
         if (clk'event and clk='0') then
-
             if (in_rd_loc = '1') then
+                if next_type = W_0FILL or next_type = W_1FILL then
+                    --prepare for next fill
+                    input_fill_length <= parse_fill_length(input_fill_length, next_word_buffer);
+                end if;
+
                 current_word_buffer <= next_word_buffer;
                 current_type <= next_type;
-                if (in_empty = '0') then
+                if (input_available = '1') then
                     next_word_buffer <= blk_in;
                     next_type <= parse_word_type(blk_in);
+                    in_rd_loc <= '0';
                 else
                     next_word_buffer <= (others => 'U');
                     next_type <= W_NONE;
@@ -165,12 +157,10 @@ begin
             else
                 running <= '0';
             end if;
-
         end if;
 
+        in_rd  <= in_rd_loc;
+        out_wr <= out_wr_loc;
     end process;
-
-    in_rd  <= in_rd_loc;
-    out_wr <= out_wr_loc;
 
 end IMP;
