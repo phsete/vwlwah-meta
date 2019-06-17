@@ -27,11 +27,11 @@ compile:
 	$(GHDL_CMD) -m --workdir=$(BINDIR) --work=work $(TESTBENCH)
 
 dump:
-	rm -r dump
+	rm -f dump
 	ghdl -r $(TESTBENCH) --trace-signals > dump
 
 wave:
-	rm -r wave
+	rm -f wave
 	ghdl -r $(TESTBENCH) --vcd=wave
 
 clean:
