@@ -4,11 +4,12 @@ MAKEFLAGS += -r
 
 MODULES=\
 	  fifo \
+	  fifo_32b \
 	  encoder \
 	  decoder
 
 TESTBENCH=\
-	  decoder_tb
+	  fifo_tb
 
 GHDL_CMD=ghdl
 
