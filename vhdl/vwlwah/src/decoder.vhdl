@@ -88,16 +88,13 @@ begin
             if (next_type = current_type) then
                 output_buffer <= emit_fill(fill_type);
                 output_fill_length <= output_fill_length + 1;
-                in_rd_loc <= '1';
             else
                 output_buffer <= emit_fill(fill_type);
                 if (input_fill_length - output_fill_length > 1) then
                     output_fill_length <= output_fill_length + 1;
-                    in_rd_loc <= '0'; -- wait with next read until emission of this fill is completed
                 elsif (input_fill_length - output_fill_length = 1) then
                     input_fill_length <= (others => '0');
                     output_fill_length <= (others => '0');
-                    in_rd_loc <= '1';
                 end if;
             end if;
 
@@ -109,7 +106,6 @@ begin
             output_fill_length <= (others => '0');
             output_buffer <= emit_literal(current_word_buffer);
             out_wr_loc <= '1';
-            in_rd_loc <= '1';
         end procedure;
 
     begin
@@ -123,7 +119,6 @@ begin
                     handle_L;
                 when others =>
                     out_wr_loc <= '0';
-                    in_rd_loc <= '1';
             end case;
 
             input_available <= not(in_empty);
@@ -139,12 +134,37 @@ begin
                 current_word_buffer <= next_word_buffer;
                 current_type <= next_type;
                 if (input_available = '1') then
+                    -- prepare for next read
+                    if (next_type = W_0FILL or next_type = W_1FILL) then
+                        if next_type = parse_word_type(blk_in) then
+                            in_rd_loc <= '1';
+                        else
+                            if (parse_fill_length(input_fill_length, next_word_buffer) - output_fill_length > 1) then
+                                in_rd_loc <= '0'; -- wait with next read until emission of this fill is completed
+                            else
+                                in_rd_loc <= '1';
+                            end if;
+                        end if;
+                    elsif (next_type = w_LITERAL) then
+                        in_rd_loc <= '1';
+                    end if;
+
                     next_word_buffer <= blk_in;
                     next_type <= parse_word_type(blk_in);
-                    in_rd_loc <= '0';
                 else
                     next_word_buffer <= (others => 'U');
                     next_type <= W_NONE;
+                    in_rd_loc <= '1'; -- experimental
+                end if;
+            else
+                if (next_type = W_0FILL or next_type = W_1FILL) then
+                    if (parse_fill_length(input_fill_length, next_word_buffer) - output_fill_length > 1) then
+                        in_rd_loc <= '0'; -- wait with next read until emission of this fill is completed
+                    else
+                        in_rd_loc <= '1';
+                    end if;
+                else
+                    in_rd_loc <= '1';
                 end if;
             end if;
 
@@ -159,8 +179,9 @@ begin
             end if;
         end if;
 
-        in_rd  <= in_rd_loc;
-        out_wr <= out_wr_loc;
     end process;
+
+    in_rd  <= in_rd_loc;
+    out_wr <= out_wr_loc;
 
 end IMP;

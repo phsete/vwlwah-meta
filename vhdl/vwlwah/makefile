@@ -14,7 +14,7 @@ GHDL_CMD=ghdl
 
 BINDIR=bin
 
-.PHONY: clean dump
+.PHONY: clean dump wave
 
 all: compile
 
@@ -31,6 +31,7 @@ dump:
 	ghdl -r $(TESTBENCH) --trace-signals > dump
 
 wave:
+	rm -r wave
 	ghdl -r $(TESTBENCH) --vcd=wave
 
 clean:
