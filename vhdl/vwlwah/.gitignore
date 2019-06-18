@@ -1,4 +1,5 @@
 *
 !/.gitignore
 !/makefile
-!src/*.vhdl
+!/src
+!/src/*.vhdl

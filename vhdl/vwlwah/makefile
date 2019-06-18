@@ -6,10 +6,11 @@ MODULES=\
 	  fifo \
 	  fifo_32b \
 	  encoder \
-	  decoder
+	  decoder \
+	  inverter
 
 TESTBENCH=\
-	  fifo_tb
+	  inverter_tb
 
 GHDL_CMD=ghdl
 
