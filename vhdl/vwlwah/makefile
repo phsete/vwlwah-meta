@@ -7,10 +7,11 @@ MODULES=\
 	  fifo_32b \
 	  encoder \
 	  decoder \
+	  logic_or \
 	  inverter
 
 TESTBENCH=\
-	  inverter_tb
+	  logic_or_tb
 
 GHDL_CMD=ghdl
 
