@@ -80,9 +80,9 @@ begin
         report "FIFO_32b: b must not be greater than 32 (is " & natural'image(Wortbreite) & " )"  severity error;
 
         if (clk'event and clk='1') then
-            if (Wr='1' and full_loc='0') then
+            if (Wr='1' and full_loc='0' and not final) then
                 write_next(Din);
-                if (Final_in = '1' and not(final)) then
+                if (Final_in = '1') then
                     final <= true;
                     final_idx <= wrcnt;
                 end if;

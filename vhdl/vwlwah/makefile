@@ -3,7 +3,7 @@
 MAKEFLAGS += -r
 
 MODULES=\
-	  fifo \
+	  fifo_bb \
 	  fifo_32b \
 	  encoder \
 	  decoder \
@@ -11,7 +11,7 @@ MODULES=\
 	  inverter
 
 TESTBENCH=\
-	  logic_or_tb
+	  fifo_b32_tb
 
 GHDL_CMD=ghdl
 
