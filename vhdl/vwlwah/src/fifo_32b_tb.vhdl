@@ -3,10 +3,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 --  A testbench has no ports.
-entity fifo_tb is
-    end fifo_tb;
+entity fifo_32b_tb is
+    end fifo_32b_tb;
 
-architecture behav of fifo_tb is
+architecture behav of fifo_32b_tb is
 
     -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
     function to_string ( a: std_logic_vector) return string is
@@ -21,7 +21,7 @@ architecture behav of fifo_tb is
     end function;
 
     -- Declaration of the components that will be instantiated.
-    component fifo
+    component fifo_32b
         Generic (
                     constant Addrbreite: natural := 3;
                     constant Wortbreite: natural := 5
@@ -40,7 +40,7 @@ architecture behav of fifo_tb is
     end component;
 
     --  Specifies which entity is bound with the component.
-    for fifo_0: fifo use entity work.fifo_32b;
+    for fifo_0: fifo_32b use entity work.fifo_32b;
 
     -- outer signals
     signal outer_clk:      std_logic;
@@ -56,7 +56,7 @@ architecture behav of fifo_tb is
 
     begin
         --  Component instantiation.
-        fifo_0: fifo
+        fifo_0: fifo_32b
         port map (CLK => outer_clk,
                   Final_in => final_in,
                   Final_out => final_out,
