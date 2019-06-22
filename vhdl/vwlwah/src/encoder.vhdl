@@ -16,7 +16,10 @@ entity encoder is
              out_full:      in std_logic;
              blk_out:       out std_logic_vector(word_size-1 downto 0);
              in_rd:         out std_logic;
-             out_wr:        out std_logic
+             out_wr:        out std_logic;
+             final_in:      in std_logic;
+             final_out:     out std_logic;
+             reset:         in std_logic
          );
 
 end encoder;
@@ -34,6 +37,7 @@ architecture IMP of encoder is
     signal output_buffer:       std_logic_vector(word_size-1 downto 0);
     signal out_wr_loc:          std_logic;
     signal running:             std_logic := '1';
+    signal final:               boolean := false;
     signal buffer_type:         Word := W_NONE;
 
 begin
@@ -166,6 +170,9 @@ begin
                 zero_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
                 out_wr_loc <= '1';
+                if (final) then
+                    final_out <= '1';
+                end if;
             end if;
         end procedure;
 
@@ -181,6 +188,9 @@ begin
                 one_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
                 out_wr_loc <= '1';
+                if (final) then
+                    final_out <= '1';
+                end if;
             end if;
         end procedure;
 
@@ -194,6 +204,9 @@ begin
                     output_buffer <= emit_literal(literal_buffer);
                     buffer_type <= W_NONE;
                     out_wr_loc <= '1';
+                    if (final) then
+                        final_out <= '1';
+                    end if;
                 when W_0FILL_1FILL =>
                     handle_0F_1F;
                 when W_1FILL_0FILL =>
@@ -239,7 +252,7 @@ begin
                                 out_wr_loc <= '1';
                             end if;
                         end if;
-                    else
+                    elsif (final) then
                         if (zero_fill_length /= to_unsigned(0, fill_counter_size)) then
                             handle_0F;
                         elsif (one_fill_length /= to_unsigned(0, fill_counter_size)) then
@@ -256,8 +269,11 @@ begin
         end if;
 
         if (clk'event and clk='0') then
-            if (input_available = '1') then
+            if (input_available = '1' and not final) then
                 input_buffer <= blk_in;
+                if (final_in = '1') then
+                    final <= true;
+                end if;
             end if;
 
             if (out_wr_loc = '1' and out_full = '0') then               -- ready to write output value

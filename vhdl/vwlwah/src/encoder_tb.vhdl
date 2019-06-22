@@ -33,7 +33,10 @@ architecture behav of encoder_tb is
                  out_full:      in std_logic;
                  blk_out:       out std_logic_vector(4 downto 0);
                  in_rd:         out std_logic;
-                 out_wr:        out std_logic
+                 out_wr:        out std_logic;
+                 final_in:      in std_logic;
+                 final_out:     out std_logic;
+                 reset:         in std_logic
              );
     end component;
 
@@ -48,7 +51,10 @@ architecture behav of encoder_tb is
                Rd    : in  STD_LOGIC;
                Empty : out STD_LOGIC;
                Full  : out STD_LOGIC;
-               CLK   : in  STD_LOGIC
+               CLK   : in  STD_LOGIC;
+               Final_in: in std_logic;
+               Final_out: out std_logic;
+               Reset: in std_logic
            );
     end component;
 
@@ -63,14 +69,17 @@ architecture behav of encoder_tb is
                Rd    : in  STD_LOGIC;
                Empty : out STD_LOGIC;
                Full  : out STD_LOGIC;
-               CLK   : in  STD_LOGIC
+               CLK   : in  STD_LOGIC;
+               Final_in: in std_logic;
+               Final_out: out std_logic;
+               Reset: in std_logic
            );
     end component;
 
     --  Specifies which entity is bound with the component.
     for encoder_0: encoder use entity work.encoder;
-    for input_fifo_0: input_fifo use entity work.FIFO;
-    for output_fifo_0: output_fifo use entity work.FIFO;
+    for input_fifo_0: input_fifo use entity work.FIFO_bb;
+    for output_fifo_0: output_fifo use entity work.FIFO_bb;
 
     -- inner signals
     signal blk_in:          std_logic_vector(3 downto 0);
@@ -79,6 +88,8 @@ architecture behav of encoder_tb is
     signal out_full:        std_logic;
     signal in_rd:           std_logic;
     signal out_wr:          std_logic;
+    signal final_in:        std_logic;
+    signal final_out:       std_logic;
 
     -- outer signals
     signal outer_clk:      std_logic;
@@ -88,6 +99,9 @@ architecture behav of encoder_tb is
     signal outer_output:   std_logic_vector(4 downto 0);
     signal outer_empty:    std_logic;
     signal outer_full:     std_logic;
+    signal outer_final_in: std_logic;
+    signal outer_final_out:std_logic;
+    signal outer_reset:    std_logic;
 
     begin
         --  Component instantiation.
@@ -98,6 +112,9 @@ architecture behav of encoder_tb is
                   in_empty => in_empty,
                   out_full => out_full,
                   in_rd => in_rd,
+                  final_in => final_in,
+                  final_out => final_out,
+                  reset => outer_reset,
                   out_wr => out_wr);
 
         input_fifo_0: input_fifo
@@ -107,6 +124,9 @@ architecture behav of encoder_tb is
                   Dout => blk_in,
                   Rd => in_rd,
                   Empty => in_empty,
+                  Final_in => outer_final_in,
+                  Final_out => final_in,
+                  Reset => outer_reset,
                   Full => outer_full);
 
         output_fifo_0: output_fifo
@@ -116,42 +136,58 @@ architecture behav of encoder_tb is
                   Dout => outer_output,
                   Rd => outer_rd_en,
                   Empty => outer_empty,
+                  Final_in => final_out,
+                  Final_out => outer_final_out,
+                  Reset => outer_reset,
                   Full => out_full);
 
         --  This process does the real job.
         process
         type pattern_type is record
             --  The inputs of the encoder.
+            outer_reset: std_logic;
+            outer_final_in: std_logic;
             outer_input: std_logic_vector(3 downto 0);
             outer_wr_en: std_logic;
             outer_rd_en: std_logic;
             --  The expected outputs of the encoder.
             outer_output: std_logic_vector(4 downto 0);
             outer_empty: std_logic;
+            outer_final_out: std_logic;
         end record;
         --  The patterns to apply.
         type pattern_array is array (natural range <>) of pattern_type;
         constant patterns : pattern_array :=
-        (("0001", '1', '1', "UUUUU", '1'),  -- 00
-         ("0010", '1', '1', "UUUUU", '1'),  -- 01
-         ("0100", '1', '1', "UUUUU", '1'),  -- 02
-         ("1000", '1', '1', "UUUUU", '0'),  -- 03
-         ("0000", '1', '1', "00001", '0'),  -- 04
-         ("0000", '1', '1', "00010", '0'),  -- 05
-         ("0000", '1', '1', "00100", '0'),  -- 06
-         ("0000", '1', '1', "01000", '1'),  -- 07
-         ("0000", '1', '1', "01000", '1'),  -- 08
-         ("0000", '1', '1', "01000", '1'),  -- 09
-         ("0000", '1', '1', "01000", '1'),  -- 10
-         ("0000", '1', '1', "01000", '1'),  -- 11
-         ("0000", '1', '1', "01000", '1'),  -- 12
-         ("0000", '1', '1', "01000", '1'),  -- 13
-         ("0000", '0', '1', "01000", '1'),  -- 14
-         ("0000", '0', '1', "01000", '1'),  -- 15
-         ("0000", '0', '1', "01000", '1'),  -- 16
-         ("0000", '0', '1', "01000", '0'),  -- 17
-         ("0000", '0', '1', "10001", '0'),  -- 18
-         ("0000", '0', '1', "10010", '1')); -- 19
+        (('0', '0', "0001", '1', '1', "UUUUU", '1', '0'),  -- 00
+         ('0', '0', "0010", '1', '1', "UUUUU", '1', '0'),  -- 01
+         ('0', '0', "0100", '1', '1', "UUUUU", '1', '0'),  -- 02
+         ('0', '0', "1000", '1', '1', "UUUUU", '0', '0'),  -- 03
+         ('0', '0', "0000", '1', '1', "00001", '0', '0'),  -- 04
+         ('0', '0', "0000", '1', '1', "00010", '0', '0'),  -- 05
+         ('0', '0', "0000", '0', '1', "00100", '0', '0'),  -- 06
+         ('0', '0', "0000", '0', '1', "01000", '1', '0'),  -- 07
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 08
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 09
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 10
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 11
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 12
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 13
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 14
+         ('0', '0', "0000", '1', '1', "01000", '1', '0'),  -- 15
+         ('0', '1', "0001", '1', '1', "01000", '1', '0'),  -- 16
+         ('0', '0', "0000", '0', '1', "01000", '1', '0'),  -- 17
+         ('0', '0', "0000", '0', '1', "01000", '1', '0'),  -- 18
+         ('0', '0', "0000", '0', '1', "01000", '0', '0'),  -- 19
+         ('0', '0', "0000", '0', '1', "10001", '0', '0'),  -- 20
+         ('0', '0', "0000", '0', '1', "10010", '0', '0'),  -- 21
+         ('0', '0', "0000", '0', '1', "00001", '1', '1'),  -- 22
+         ('0', '0', "0000", '0', '1', "00001", '1', '1'),  -- 23
+         ('1', '0', "0000", '0', '1', "00001", '1', '0'),  -- 24
+         ('0', '0', "0000", '0', '1', "00001", '1', '0'),  -- 25
+         ('0', '0', "0000", '0', '1', "00001", '1', '0'),  -- 26
+         ('0', '0', "0000", '0', '1', "00001", '1', '0'),  -- 27
+         ('0', '0', "0000", '0', '1', "00001", '1', '0'),  -- 28
+         ('0', '0', "0000", '0', '1', "00001", '1', '0')); -- 29
         begin
             assert false report "begin of test" severity note;
 
@@ -161,6 +197,8 @@ architecture behav of encoder_tb is
                 outer_wr_en <= patterns(i).outer_wr_en;
                 outer_input <= patterns(i).outer_input;
                 outer_rd_en <= patterns(i).outer_rd_en;
+                outer_reset <= patterns(i).outer_reset;
+                outer_final_in <= patterns(i).outer_final_in;
 
                 -- simulate the clock
                 outer_clk <= '0';
@@ -173,6 +211,9 @@ architecture behav of encoder_tb is
                 --  Check the outputs.
                 assert outer_empty = patterns(i).outer_empty
                 report "empty state incorrect in test " & integer'image(i) & ". Expected: " & std_logic'image(patterns(i).outer_empty) & " but found " & std_logic'image(outer_empty) severity error;
+
+                assert outer_final_out = patterns(i).outer_final_out
+                report "final state incorrect in test " & integer'image(i) & ". Expected: " & std_logic'image(patterns(i).outer_final_out) & " but found " & std_logic'image(outer_final_out) severity error;
 
                 assert outer_output = patterns(i).outer_output
                 report "bad encoding in test " & integer'image(i) & ". Expected: " & to_string(patterns(i).outer_output) & " but found " & to_string(outer_output) severity error;
