@@ -16,7 +16,10 @@ entity decoder is
              out_full:      in std_logic;
              blk_out:       out std_logic_vector(word_size-2 downto 0);
              in_rd:         out std_logic;
-             out_wr:        out std_logic
+             out_wr:        out std_logic;
+             final_in:      in std_logic;
+             final_out:     out std_logic;
+             reset:         in std_logic
          );
 
 end decoder;
