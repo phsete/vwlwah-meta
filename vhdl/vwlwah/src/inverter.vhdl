@@ -16,6 +16,9 @@ entity inverter is
              out_full:      in std_logic;
              blk_out:       out std_logic_vector(word_size-1 downto 0);
              in_rd:         out std_logic;
+             final_in: in STD_LOGIC;
+             final_out: out STD_LOGIC;
+             RESET: in std_logic;
              out_wr:        out std_logic
          );
 
@@ -25,13 +28,14 @@ architecture IMP of inverter is
 
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
-    signal current_word:        std_logic_vector(word_size-1 downto 0);
-    signal output_buffer:       std_logic_vector(word_size-1 downto 0);
+    signal current_word:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
+    signal output_buffer:       std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:     std_logic := '0';
-    signal in_rd_loc:           std_logic;
-    signal out_wr_loc:          std_logic;
     signal running:             std_logic := '1';
     signal current_type:        Word := W_NONE;
+    signal final:               boolean := false;
+    signal in_rd_loc:           std_logic;
+    signal out_wr_loc:          std_logic;
 
 begin
     process (clk)
@@ -84,11 +88,14 @@ begin
             end case;
 
             input_available <= not(in_empty);
+            if (final_in = '1') then
+                final <= true;
+            end if;
         end if;
 
         if (clk'event and clk='0') then
             -- read the next word and push buffers forward
-            if (input_available = '1') then
+            if (input_available = '1' and not final) then
                 current_word <= blk_in;
                 current_type <= parse_word_type(blk_in);
             else
@@ -109,8 +116,18 @@ begin
             end if;
         end if;
 
+        if (Reset = '1') then
+            current_word <= (others => 'U');
+            output_buffer <= (others => 'U');
+            input_available <= '0';
+            running <= '1';
+            current_type <= W_NONE;
+            final <= false;
+        end if;
+
     end process;
 
+    final_out <= '1' when final else '0';
     in_rd  <= '1';
     out_wr <= out_wr_loc;
 

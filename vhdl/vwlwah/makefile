@@ -11,7 +11,7 @@ MODULES=\
 	  inverter
 
 TESTBENCH=\
-	  fifo_b32_tb
+	  inverter_tb
 
 GHDL_CMD=ghdl
 
