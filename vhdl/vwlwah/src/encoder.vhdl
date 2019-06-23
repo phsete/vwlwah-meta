@@ -195,76 +195,88 @@ begin
         end procedure;
 
     begin
-        if (clk'event and clk='1' and running = '1') then
+        if (clk'event and clk='1') then
+            if (running = '1') then
 
-            out_wr_loc <= '0';
+                out_wr_loc <= '0';
 
-            case buffer_type is
-                when W_LITERAL =>
-                    output_buffer <= emit_literal(literal_buffer);
-                    buffer_type <= W_NONE;
-                    out_wr_loc <= '1';
-                    if (final) then
-                        final_out <= '1';
-                    end if;
-                when W_0FILL_1FILL =>
-                    handle_0F_1F;
-                when W_1FILL_0FILL =>
-                    handle_1F_0F;
-                when W_0FILL_LITERAL =>
-                    handle_0F_L;
-                when W_1FILL_LITERAL =>
-                    handle_1F_L;
-                when W_0FILL =>
-                    handle_0F;
-                when W_1FILL =>
-                    handle_1F;
-                when W_NONE =>
-                    if (input_available = '1') then
+                case buffer_type is
+                    when W_LITERAL =>
+                        output_buffer <= emit_literal(literal_buffer);
+                        buffer_type <= W_NONE;
+                        out_wr_loc <= '1';
+                        if (final) then
+                            final_out <= '1';
+                        end if;
+                    when W_0FILL_1FILL =>
+                        handle_0F_1F;
+                    when W_1FILL_0FILL =>
+                        handle_1F_0F;
+                    when W_0FILL_LITERAL =>
+                        handle_0F_L;
+                    when W_1FILL_LITERAL =>
+                        handle_1F_L;
+                    when W_0FILL =>
+                        handle_0F;
+                    when W_1FILL =>
+                        handle_1F;
+                    when W_NONE =>
+                        if (input_available = '1') then
                         -- ready to read input value
-                        if input_buffer = (word_size-2 downto 0 => '0') then
+                            if input_buffer = (word_size-2 downto 0 => '0') then
                             -- input is zero fill, emit previously started one fill first
-                            if (one_fill_length /= to_unsigned(0, fill_counter_size)) then
-                                handle_1F_0F;
-                            else
+                                if (one_fill_length /= to_unsigned(0, fill_counter_size)) then
+                                    handle_1F_0F;
+                                else
                                 -- no output yet, count further
-                                num_fill_words <= fill_word_count(zero_fill_length + 1);
-                                zero_fill_length <= zero_fill_length + 1;
-                            end if;
-                        elsif input_buffer = (word_size-2 downto 0 => '1') then
-                                -- input is one fill, emit previously started zero fill first
-                            if (zero_fill_length /= to_unsigned(0, fill_counter_size)) then
-                                handle_0F_1F;
+                                    num_fill_words <= fill_word_count(zero_fill_length + 1);
+                                    zero_fill_length <= zero_fill_length + 1;
+                                end if;
+                            elsif input_buffer = (word_size-2 downto 0 => '1') then
+                            -- input is one fill, emit previously started zero fill first
+                                if (zero_fill_length /= to_unsigned(0, fill_counter_size)) then
+                                    handle_0F_1F;
+                                else
+                                -- no output yet, count further
+                                    num_fill_words <= fill_word_count(one_fill_length + 1);
+                                    one_fill_length <= one_fill_length + 1;
+                                end if;
                             else
-                                    -- no output yet, count further
-                                num_fill_words <= fill_word_count(one_fill_length + 1);
-                                one_fill_length <= one_fill_length + 1;
+                            -- input is literal word, emit previously started fill words first
+                                if (zero_fill_length /= to_unsigned(0, fill_counter_size)) then
+                                    handle_0F_L;
+                                elsif (one_fill_length /= to_unsigned(0, fill_counter_size)) then
+                                    handle_1F_L;
+                                else
+                                    output_buffer <= emit_literal(input_buffer);
+                                    buffer_type <= W_NONE;
+                                    out_wr_loc <= '1';
+                                end if;
                             end if;
-                        else
-                                -- input is literal word, emit previously started fill words first
+                        elsif (final) then
                             if (zero_fill_length /= to_unsigned(0, fill_counter_size)) then
-                                handle_0F_L;
+                                handle_0F;
                             elsif (one_fill_length /= to_unsigned(0, fill_counter_size)) then
-                                handle_1F_L;
-                            else
-                                output_buffer <= emit_literal(input_buffer);
-                                buffer_type <= W_NONE;
-                                out_wr_loc <= '1';
+                                handle_1F;
                             end if;
                         end if;
-                    elsif (final) then
-                        if (zero_fill_length /= to_unsigned(0, fill_counter_size)) then
-                            handle_0F;
-                        elsif (one_fill_length /= to_unsigned(0, fill_counter_size)) then
-                            handle_1F;
-                        end if;
-                    end if;
-            end case;
+                end case;
 
-            if (buffer_type = W_NONE and in_empty = '0') then
-                input_available <= '1';
-            else
+                if (buffer_type = W_NONE and in_empty = '0') then
+                    input_available <= '1';
+                else
+                    input_available <= '0';
+                end if;
+            end if;
+
+            if (reset = '1') then
+                zero_fill_length <= to_unsigned(0, fill_counter_size);
+                one_fill_length <= to_unsigned(0, fill_counter_size);
+                num_fill_words <= 0;
                 input_available <= '0';
+                running <= '1';
+                final <= false;
+                buffer_type <= W_NONE;
             end if;
         end if;
 
