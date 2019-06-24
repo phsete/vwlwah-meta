@@ -52,6 +52,8 @@ architecture IMP of logic_or is
 
     signal next_output_block:    std_logic_vector(word_size-2 downto 0);
 
+    signal final_received:       std_logic_vector(0 to num_inputs-1) := (others => '0');
+
 begin
     process (clk)
         --
@@ -241,6 +243,21 @@ begin
         end consumable_length;
 
         --
+        -- checks the final_received value and input buffers to determine final_out state
+        --
+        impure function is_final return boolean is
+            variable ret_value: boolean := false;
+        begin
+            for input_idx in 0 to num_inputs-1 loop
+                ret_value := ret_value or (final_received(input_idx) = '1'
+                                           and next_type(input_idx) = W_NONE
+                                           and input_length(input_idx) = consumed_length(input_idx));
+            end loop;
+            ret_value := ret_value and output_words_left <= 1;
+            return ret_value;
+        end is_final;
+
+        --
         -- adds n to all consumed_length values
         --
         procedure consume (n: unsigned(fill_counter_size-1 downto 0)) is
@@ -285,7 +302,7 @@ begin
                 -- read the next word and push buffers forward
                 current_word(input_idx) <= next_word(input_idx);
                 current_type(input_idx) <= next_type(input_idx);
-                if (input_available(input_idx) = '1') then
+                if (input_available(input_idx) = '1' and not final_received(input_idx) = '1') then
                     new_read_word := blk_in(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
                     next_word(input_idx) <= new_read_word;
                     next_type(input_idx) <= parse_word_type(new_read_word);
@@ -336,15 +353,19 @@ begin
             end if;
 
             input_available <= not(in_empty);
+            final_out <= to_std_logic(is_final);
         end if;
 
         --
         -- do I/O on falling edge of clock signal
         --
         if (clk'event and clk='0') then
-            if (running = '1' and output_words_left = 0) then
+            if (running = '1' and output_words_left = 0 and not is_final) then
                 for input_idx in 0 to num_inputs-1 loop
                     read_input(input_idx);
+                    if (final_in(input_idx) = '1') then
+                        final_received(input_idx) <= '1';
+                    end if;
                 end loop;
             end if;
 
