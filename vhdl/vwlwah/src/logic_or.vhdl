@@ -346,11 +346,11 @@ begin
                 elsif next_type(input_idx) = W_LITERAL then
                     input_length(input_idx) <= to_unsigned(1, fill_counter_size);
                     consumed_length(input_idx) <= (others => '0');
-                    in_rd_loc(input_idx) <= to_std_logic(done_reading);
+                    in_rd_loc(input_idx) <= to_std_logic(done_reading and output_words_left = 0);
                 else
                     input_length(input_idx) <= to_unsigned(0, fill_counter_size);
                     consumed_length(input_idx) <= (others => '0');
-                    in_rd_loc(input_idx) <= to_std_logic(done_reading);
+                    in_rd_loc(input_idx) <= to_std_logic(done_reading and output_words_left = 0);
                 end if;
 
                 -- read the next word and push buffers forward
@@ -379,7 +379,7 @@ begin
         -- do logic on rising edge of clock signal
         --
         if (clk'event and clk='1' and running = '1') then
-            if (done_reading and output_words_left <= 0) then
+            if (done_reading and output_words_left = 0) then
                 consume(consumable_length);
                 output_length <= consumable_length;
                 output_words_left <= fill_word_count(consumable_length); -- does also work for literals
