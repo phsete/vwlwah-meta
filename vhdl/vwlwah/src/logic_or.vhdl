@@ -50,6 +50,8 @@ architecture IMP of logic_or is
     signal current_type:         type_array(0 to num_inputs-1) := (others => W_NONE);
     signal next_type:            type_array(0 to num_inputs-1) := (others => W_NONE);
 
+    signal next_output_block:    std_logic_vector(word_size-2 downto 0);
+
 begin
     process (clk)
         --
@@ -93,9 +95,9 @@ begin
             end if;
             for i in fill_counter_size-1 downto 0 loop
                 if length(i) = '1' then
-                    return i / (word_size-2);
+                    return (i / (word_size-2)) + 1;
                 end if;
-            end loop;  -- i
+            end loop;
             return 1;
         end fill_word_count;
 
@@ -308,29 +310,22 @@ begin
         if (clk'event and clk='1' and running = '1') then
             if (done_reading and output_words_left <= 0) then
                 consume(consumable_length);
-                case parse_block_type(get_output_block_value(current_word)) is
-                    when W_LITERAL =>
-                        output_buffer <= emit_literal(get_output_block_value(current_word));
-                        out_wr_loc <= '1';
-                    when W_0FILL =>
-                        output_buffer <= emit_fill('0', output_length, fill_word_count(output_length));
-                        output_words_left <= fill_word_count(output_length) - 1;
-                        out_wr_loc <= '1';
-                    when W_1FILL =>
-                        output_buffer <= emit_fill('1', output_length, fill_word_count(output_length));
-                        output_words_left <= fill_word_count(output_length) - 1;
-                        out_wr_loc <= '1';
-                    when others =>
-                        out_wr_loc <= '0';
-                end case;
+                output_length <= consumable_length;
+                output_words_left <= fill_word_count(consumable_length); -- does also work for literals
+                next_output_block <= get_output_block_value(current_word);
+                out_wr_loc <= '0';
             elsif (done_reading and output_words_left > 0) then
-                case parse_word_type(get_output_block_value(current_word)) is
+                case parse_block_type(next_output_block) is
                     when W_0FILL =>
-                        output_buffer <= emit_fill('0', output_length, output_words_left);
+                        output_buffer <= emit_fill('0', output_length, output_words_left - 1);
                         output_words_left <=  output_words_left- 1;
                         out_wr_loc <= '1';
                     when W_1FILL =>
-                        output_buffer <= emit_fill('1', output_length, output_words_left);
+                        output_buffer <= emit_fill('1', output_length, output_words_left - 1);
+                        output_words_left <= output_words_left - 1;
+                        out_wr_loc <= '1';
+                    when W_LITERAL =>
+                        output_buffer <= emit_literal(next_output_block);
                         output_words_left <= output_words_left - 1;
                         out_wr_loc <= '1';
                     when others =>
@@ -347,9 +342,11 @@ begin
         -- do I/O on falling edge of clock signal
         --
         if (clk'event and clk='0') then
-            for input_idx in 0 to num_inputs-1 loop
-                read_input(input_idx);
-            end loop;
+            if (running = '1' and output_words_left = 0) then
+                for input_idx in 0 to num_inputs-1 loop
+                    read_input(input_idx);
+                end loop;
+            end if;
 
             -- ready to write output value
             if (out_wr_loc = '1' and out_full = '0') then
