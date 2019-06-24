@@ -258,7 +258,12 @@ begin
             if (in_rd_loc(input_idx) = '1') then
                 if next_type(input_idx) = W_0FILL or next_type(input_idx) = W_1FILL then
                     --prepare for next fill
-                    new_fill_length := parse_fill_length(input_length(input_idx), next_word(input_idx));
+                    if (current_type(input_idx) = next_type(input_idx)) then
+                        new_fill_length := parse_fill_length(input_length(input_idx), next_word(input_idx));
+                    else
+                        new_fill_length := parse_fill_length((others => '0') , next_word(input_idx));
+                        consumed_length(input_idx) <= (others => '0');
+                    end if;
                     input_length(input_idx) <= new_fill_length;
                     if (new_fill_length > consumed_length(input_idx) + 1) then
                         in_rd_loc(input_idx) <= '0';
@@ -267,9 +272,11 @@ begin
                     end if;
                 elsif next_type(input_idx) = W_LITERAL then
                     input_length(input_idx) <= to_unsigned(1, fill_counter_size);
+                    consumed_length(input_idx) <= (others => '0');
                     in_rd_loc(input_idx) <= to_std_logic(done_reading);
                 else
                     input_length(input_idx) <= to_unsigned(0, fill_counter_size);
+                    consumed_length(input_idx) <= (others => '0');
                     in_rd_loc(input_idx) <= to_std_logic(done_reading);
                 end if;
 

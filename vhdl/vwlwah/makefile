@@ -11,7 +11,7 @@ MODULES=\
 	  inverter
 
 TESTBENCH=\
-	  decoder_tb
+	  logic_or_tb
 
 GHDL_CMD=ghdl
 
@@ -34,8 +34,8 @@ dump:
 	ghdl -r $(TESTBENCH) --trace-signals > dump
 
 wave:
-	rm -f wave
-	ghdl -r $(TESTBENCH) --vcd=wave
+	rm -f wave.ghw
+	ghdl -r $(TESTBENCH) --wave=wave.ghw
 
 clean:
 	$(GHDL_CMD) --clean --workdir=$(BINDIR)
