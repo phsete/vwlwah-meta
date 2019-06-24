@@ -30,7 +30,7 @@ architecture IMP of logic_or is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
     signal output_buffer:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
-    signal input_available:      boolean := false;
+    signal input_available:      std_logic_vector(0 to num_inputs-1) := (others => '0');
     signal in_rd_loc:            std_logic_vector(0 to num_inputs-1) := (others => '0');
     signal out_wr_loc:           std_logic;
     signal running:              std_logic := '1';
@@ -45,6 +45,7 @@ architecture IMP of logic_or is
     
     signal output_length:        unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal output_words_left:    integer := 0;
+    signal done_consuming:       std_logic_vector(0 to num_inputs-1) := (others => '1');
 
     type type_array is array(integer range <>) of Word;
     signal current_type:         type_array(0 to num_inputs-1) := (others => W_NONE);
@@ -163,14 +164,16 @@ begin
         --
         -- returns true if none of the inputs are empty
         --
-        impure function is_input_available return boolean is
-            variable ret_value: boolean := true;
+        procedure set_input_available is
         begin
             for input_idx in 0 to num_inputs-1 loop
-                ret_value := ret_value and in_empty(input_idx) = '0';
+                if (in_empty(input_idx) = '0') then
+                    input_available(input_idx) <= '1';
+                else
+                    input_available(input_idx) <= '0';
+                end if;
             end loop;
-            return ret_value;
-        end is_input_available;
+        end procedure;
 
         --
         -- determines if enough input is read in order to start evaluating
@@ -191,30 +194,17 @@ begin
         --
         -- determines if at least one input is fully consumed
         --
-        impure function done_computing(input_idx: natural) return boolean is
-        begin
-            return (input_length(input_idx) <= consumed_length(input_idx));
-        end done_computing;
-
-        --
-        -- determines if at least one input is fully consumed
-        --
-        impure function done_computing return boolean is
+        procedure set_done_consuming is
             variable done: boolean := false;
         begin
             for input_idx in 0 to num_inputs-1 loop
-                done := done or done_computing(input_idx);
+                if (input_length(input_idx) <= consumed_length(input_idx)) then
+                    done_consuming(input_idx) <= '1';
+                else
+                    done_consuming(input_idx) <= '0';
+                end if;
             end loop;
-            return done;
-        end done_computing;
-
-        --
-        -- determines if all output is written
-        --
-        impure function done_writing return boolean is
-        begin
-            return (output_words_left = 0);
-        end done_writing;
+        end procedure;
 
         --
         -- decodes the literal representation of a single block
@@ -299,12 +289,14 @@ begin
 
         --
         -- read the input of the reset pin and reset all values if it is '1'
+        -- TODO: update with new signals
         --
         procedure check_reset is
         begin
             if (reset = '1') then
                 output_buffer <= (others => 'U');
-                input_available <= false;
+                input_available <= (others => '0');
+                done_consuming <= (others => '1');
                 in_rd_loc <= (others => '0');
                 running <= '1';
                 current_word <= (others => (others => 'U'));
@@ -423,18 +415,21 @@ begin
         -- do I/O on falling edge of clock signal
         --
         if (clk'event and clk='0') then
-            if (running = '1' and input_available and done_computing and done_writing and not is_final) then
-                for input_idx in 0 to num_inputs-1 loop
-                    if (done_computing(input_idx)) then
+            for input_idx in 0 to num_inputs-1 loop
+                if (in_rd_loc(input_idx) = '1' or (running = '1' and output_words_left = 0 and not is_final)) then
+                    if (input_available(input_idx) = '1') then
                         read_input(input_idx);
                     end if;
                     if (final_in(input_idx) = '1') then
                         final_received(input_idx) <= '1';
                     end if;
-                end loop;
-            end if;
+                else
+                    in_rd_loc <= (others => '0');
+                end if;
+            end loop;
 
-            input_available <= is_input_available;
+            set_done_consuming;
+            set_input_available;
 
             -- ready to write output value
             if (out_wr_loc = '1' and out_full = '0') then
