@@ -186,6 +186,7 @@ begin
                 done_loc := (current_type(input_idx) = W_0FILL or current_type(input_idx) = W_1FILL);
                 done_loc := done_loc and (current_type(input_idx) /= next_type(input_idx));
                 done_loc := done_loc or (current_type(input_idx) = W_LITERAL);
+                done_loc := done_loc or (current_type(input_idx) = W_NONE);
                 done := done and done_loc;
             end loop;
             return done;
