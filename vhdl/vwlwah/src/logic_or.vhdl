@@ -30,7 +30,7 @@ architecture IMP of logic_or is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
     signal output_buffer:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
-    signal input_available:      std_logic_vector(0 to num_inputs-1) := (others => '0');
+    signal input_available:      boolean := false;
     signal in_rd_loc:            std_logic_vector(0 to num_inputs-1) := (others => '0');
     signal out_wr_loc:           std_logic;
     signal running:              std_logic := '1';
@@ -161,6 +161,18 @@ begin
         end parse_block_type;
 
         --
+        -- returns true if none of the inputs are empty
+        --
+        impure function is_input_available return boolean is
+            variable ret_value: boolean := true;
+        begin
+            for input_idx in 0 to num_inputs-1 loop
+                ret_value := ret_value and in_empty(input_idx) = '0';
+            end loop;
+            return ret_value;
+        end is_input_available;
+
+        --
         -- determines if enough input is read in order to start evaluating
         --
         impure function done_reading return boolean is
@@ -175,6 +187,34 @@ begin
             end loop;
             return done;
         end done_reading;
+
+        --
+        -- determines if at least one input is fully consumed
+        --
+        impure function done_computing(input_idx: natural) return boolean is
+        begin
+            return (input_length(input_idx) <= consumed_length(input_idx));
+        end done_computing;
+
+        --
+        -- determines if at least one input is fully consumed
+        --
+        impure function done_computing return boolean is
+            variable done: boolean := false;
+        begin
+            for input_idx in 0 to num_inputs-1 loop
+                done := done or done_computing(input_idx);
+            end loop;
+            return done;
+        end done_computing;
+
+        --
+        -- determines if all output is written
+        --
+        impure function done_writing return boolean is
+        begin
+            return (output_words_left = 0);
+        end done_writing;
 
         --
         -- decodes the literal representation of a single block
@@ -258,6 +298,28 @@ begin
         end is_final;
 
         --
+        -- read the input of the reset pin and reset all values if it is '1'
+        --
+        procedure check_reset is
+        begin
+            if (reset = '1') then
+                output_buffer <= (others => 'U');
+                input_available <= false;
+                in_rd_loc <= (others => '0');
+                running <= '1';
+                current_word <= (others => (others => 'U'));
+                next_word <= (others => (others => 'U'));
+                input_length <= (others => (others => '0'));
+                consumed_length <= (others => (others => '0'));
+                output_length <= (others => '0');
+                output_words_left <= 0;
+                current_type <= (others => W_NONE);
+                next_type <= (others => W_NONE);
+                final_received <= (others => '0');
+            end if;
+        end procedure;
+
+        --
         -- adds n to all consumed_length values
         --
         procedure consume (n: unsigned(fill_counter_size-1 downto 0)) is
@@ -302,7 +364,7 @@ begin
                 -- read the next word and push buffers forward
                 current_word(input_idx) <= next_word(input_idx);
                 current_type(input_idx) <= next_type(input_idx);
-                if (input_available(input_idx) = '1' and not final_received(input_idx) = '1') then
+                if (not final_received(input_idx) = '1') then
                     new_read_word := blk_in(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
                     next_word(input_idx) <= new_read_word;
                     next_type(input_idx) <= parse_word_type(new_read_word);
@@ -352,38 +414,27 @@ begin
                 out_wr_loc <= '0';
             end if;
 
-            input_available <= not(in_empty);
             final_out <= to_std_logic(is_final);
 
-            if (reset = '1') then
-                output_buffer <= (others => 'U');
-                input_available <= (others => '0');
-                in_rd_loc <= (others => '0');
-                running <= '1';
-                current_word <= (others => (others => 'U'));
-                next_word <= (others => (others => 'U'));
-                input_length <= (others => (others => '0'));
-                consumed_length <= (others => (others => '0'));
-                output_length <= (others => '0');
-                output_words_left <= 0;
-                current_type <= (others => W_NONE);
-                next_type <= (others => W_NONE);
-                final_received <= (others => '0');
-            end if;
+            check_reset;
         end if;
 
         --
         -- do I/O on falling edge of clock signal
         --
         if (clk'event and clk='0') then
-            if (running = '1' and output_words_left = 0 and not is_final) then
+            if (running = '1' and input_available and done_computing and done_writing and not is_final) then
                 for input_idx in 0 to num_inputs-1 loop
-                    read_input(input_idx);
+                    if (done_computing(input_idx)) then
+                        read_input(input_idx);
+                    end if;
                     if (final_in(input_idx) = '1') then
                         final_received(input_idx) <= '1';
                     end if;
                 end loop;
             end if;
+
+            input_available <= is_input_available;
 
             -- ready to write output value
             if (out_wr_loc = '1' and out_full = '0') then
