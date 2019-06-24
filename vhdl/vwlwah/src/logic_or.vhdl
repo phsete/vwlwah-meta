@@ -29,7 +29,7 @@ architecture IMP of logic_or is
 
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
-    signal output_buffer:        std_logic_vector(word_size-1 downto 0);
+    signal output_buffer:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:      std_logic_vector(0 to num_inputs-1) := (others => '0');
     signal in_rd_loc:            std_logic_vector(0 to num_inputs-1) := (others => '0');
     signal out_wr_loc:           std_logic;
@@ -354,6 +354,22 @@ begin
 
             input_available <= not(in_empty);
             final_out <= to_std_logic(is_final);
+
+            if (reset = '1') then
+                output_buffer <= (others => 'U');
+                input_available <= (others => '0');
+                in_rd_loc <= (others => '0');
+                running <= '1';
+                current_word <= (others => (others => 'U'));
+                next_word <= (others => (others => 'U'));
+                input_length <= (others => (others => '0'));
+                consumed_length <= (others => (others => '0'));
+                output_length <= (others => '0');
+                output_words_left <= 0;
+                current_type <= (others => W_NONE);
+                next_type <= (others => W_NONE);
+                final_received <= (others => '0');
+            end if;
         end if;
 
         --
