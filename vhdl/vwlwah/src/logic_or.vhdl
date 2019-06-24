@@ -340,13 +340,6 @@ begin
                 out_wr_loc <= '0';
             end if;
 
-            if (current_type(0) /= W_NONE) then
-                output_buffer <= current_word(0);
-                out_wr_loc <= '1';
-            else
-                out_wr_loc <= '0';
-            end if;
-
             input_available <= not(in_empty);
         end if;
 
