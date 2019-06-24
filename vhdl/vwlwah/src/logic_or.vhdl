@@ -416,8 +416,8 @@ begin
         --
         if (clk'event and clk='0') then
             for input_idx in 0 to num_inputs-1 loop
-                if (in_rd_loc(input_idx) = '1' or (running = '1' and output_words_left = 0 and not is_final)) then
-                    if (input_available(input_idx) = '1') then
+                if (in_rd_loc(input_idx) = '1' or (running = '1' and output_words_left = 0)) then
+                    if (input_available(input_idx) = '1' or final_received(input_idx) = '1') then
                         read_input(input_idx);
                     end if;
                     if (final_in(input_idx) = '1') then
