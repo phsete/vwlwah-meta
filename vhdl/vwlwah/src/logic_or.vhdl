@@ -232,7 +232,7 @@ begin
         begin
             for input_idx in 0 to num_inputs-1 loop
                 if input_length(input_idx) < minimum_length then
-                    minimum_length := input_length(input_idx);
+                    minimum_length := input_length(input_idx) - consumed_length(input_idx);
                 end if;
             end loop;
             return minimum_length;
