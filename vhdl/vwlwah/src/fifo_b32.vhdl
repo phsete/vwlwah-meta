@@ -1,27 +1,27 @@
 -- angelehnt an: http://www.lothar-miller.de/s9y/archives/21-FIFO.html
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity FIFO_B32 is
     Generic (
                 Addrbreite  : natural := 8;  -- Speicherlänge = 2^Addrbreite
                 Wortbreite  : natural := 8
             );
-    Port ( Din   : in  STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
-           Wr    : in  STD_LOGIC;
-           Dout  : out STD_LOGIC_VECTOR (31 downto 0);
-           Rd    : in  STD_LOGIC;
-           Empty : out STD_LOGIC;
-           Full  : out STD_LOGIC;
-           CLK   : in  STD_LOGIC;
-           Final_in: in std_logic;
-           Final_out: out std_logic;
+    Port ( BLK_IN   : in  std_logic_vector (Wortbreite-1 downto 0);
+           WR_EN    : in  std_logic;
+           BLK_OUT  : out std_logic_vector (31 downto 0);
+           RD_EN    : in  std_logic;
+           EMPTY : out std_logic;
+           FULL  : out std_logic;
+           CLK   : in  std_logic;
+           FINAL_IN: in std_logic;
+           FINAL_OUT: out std_logic;
            RESET: in std_logic
        );
 end FIFO_B32;
 
-architecture Verhalten of FIFO_B32 is
+architecture IMP of FIFO_B32 is
 
     signal wrcnt : unsigned (Addrbreite-1 downto 0) := (others => '0');
     signal rdcnt : unsigned (Addrbreite-1 downto 0) := (others => '0');
@@ -70,15 +70,15 @@ begin
         report "FIFO_b32: b must not be greater than 32 (is " & natural'image(Wortbreite) & " )"  severity error;
 
         if (clk'event and clk='1') then
-            if (Wr='1' and full_loc='0' and not final) then
-                write_next(Din);
-                if (Final_in = '1') then
+            if (WR_EN='1' and full_loc='0' and not final) then
+                write_next(BLK_IN);
+                if (FINAL_IN = '1') then
                     final <= true;
                     final_idx <= wrcnt;
                 end if;
             end if;
-            if (Rd='1' and empty_loc='0' and final_out_loc='0') then
-                Dout <= read_next;
+            if (RD_EN='1' and empty_loc='0' and final_out_loc='0') then
+                BLK_OUT <= read_next;
             end if;
             if (RESET='1') then
                 wrcnt <= (others => '0');
@@ -92,7 +92,7 @@ begin
 final_out_loc <= '1' when (final and (rdcnt = final_idx +1)) else '0';
 full_loc  <= '1' when rdcnt = wrcnt+1 else '0';
 empty_loc <= '1' when rdcnt = wrcnt else '0';
-Final_out <= final_out_loc;
-Full  <= full_loc;
-Empty <= empty_loc;
-end Verhalten;
+FINAL_OUT <= final_out_loc;
+FULL  <= full_loc;
+EMPTY <= empty_loc;
+end IMP;

@@ -45,16 +45,16 @@ architecture behav of decoder_tb is
                     constant Addrbreite: natural := 3;
                     constant Wortbreite: natural := 5
                 );
-        Port ( Din   : in  STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
-               Wr    : in  STD_LOGIC;
-               Dout  : out STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
-               Rd    : in  STD_LOGIC;
-               Empty : out STD_LOGIC;
-               Full  : out STD_LOGIC;
+        Port ( BLK_IN   : in  STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
+               WR_EN    : in  STD_LOGIC;
+               BLK_OUT  : out STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
+               RD_EN    : in  STD_LOGIC;
+               EMPTY : out STD_LOGIC;
+               FULL  : out STD_LOGIC;
                CLK   : in  STD_LOGIC;
-               Final_in: in std_logic;
+               FINAL_IN: in std_logic;
                Final_out: out std_logic;
-               Reset: in std_logic
+               RESET: in std_logic
            );
     end component;
 
@@ -63,16 +63,16 @@ architecture behav of decoder_tb is
                     constant Addrbreite: natural := 3;
                     constant Wortbreite: natural := 4
                 );
-        Port ( Din   : in  STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
-               Wr    : in  STD_LOGIC;
-               Dout  : out STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
-               Rd    : in  STD_LOGIC;
-               Empty : out STD_LOGIC;
-               Full  : out STD_LOGIC;
+        Port ( BLK_IN   : in  STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
+               WR_EN    : in  STD_LOGIC;
+               BLK_OUT  : out STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
+               RD_EN    : in  STD_LOGIC;
+               EMPTY : out STD_LOGIC;
+               FULL  : out STD_LOGIC;
                CLK   : in  STD_LOGIC;
-               Final_in: in std_logic;
+               FINAL_IN: in std_logic;
                Final_out: out std_logic;
-               Reset: in std_logic
+               RESET: in std_logic
            );
     end component;
 
@@ -119,27 +119,27 @@ architecture behav of decoder_tb is
 
         input_fifo_0: input_fifo
         port map (CLK => outer_clk,
-                  Din => outer_input,
-                  Wr => outer_wr_en,
-                  Dout => blk_in,
-                  Rd => in_rd,
-                  Empty => in_empty,
-                  Final_in => outer_final_in,
+                  BLK_IN => outer_input,
+                  WR_EN => outer_wr_en,
+                  BLK_OUT => blk_in,
+                  RD_EN => in_rd,
+                  EMPTY => in_empty,
+                  FINAL_IN => outer_final_in,
                   Final_out => final_in,
-                  Reset => outer_reset,
-                  Full => outer_full);
+                  RESET => outer_reset,
+                  FULL => outer_full);
 
         output_fifo_0: output_fifo
         port map (CLK => outer_clk,
-                  Din => blk_out,
-                  Wr => out_wr,
-                  Dout => outer_output,
-                  Rd => outer_rd_en,
-                  Empty => outer_empty,
-                  Final_in => final_out,
+                  BLK_IN => blk_out,
+                  WR_EN => out_wr,
+                  BLK_OUT => outer_output,
+                  RD_EN => outer_rd_en,
+                  EMPTY => outer_empty,
+                  FINAL_IN => final_out,
                   Final_out => outer_final_out,
-                  Reset => outer_reset,
-                  Full => out_full);
+                  RESET => outer_reset,
+                  FULL => out_full);
 
         --  This process does the real job.
         process

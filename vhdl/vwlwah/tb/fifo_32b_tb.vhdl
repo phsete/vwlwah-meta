@@ -26,15 +26,15 @@ architecture behav of fifo_32b_tb is
                     constant Addrbreite: natural := 3;
                     constant Wortbreite: natural := 5
                 );
-        Port ( Din   : in  STD_LOGIC_VECTOR (31 downto 0);
-               Wr    : in  STD_LOGIC;
-               Dout  : out STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
-               Rd    : in  STD_LOGIC;
-               Empty : out STD_LOGIC;
-               Full  : out STD_LOGIC;
-               Final_in:  in  STD_LOGIC;
-               Final_out: out STD_LOGIC;
-               Reset: in STD_LOGIC;
+        Port ( BLK_IN   : in  STD_LOGIC_VECTOR (31 downto 0);
+               WR_EN    : in  STD_LOGIC;
+               BLK_OUT  : out STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
+               RD_EN    : in  STD_LOGIC;
+               EMPTY : out STD_LOGIC;
+               FULL  : out STD_LOGIC;
+               FINAL_IN:  in  STD_LOGIC;
+               FINAL_OUT: out STD_LOGIC;
+               RESET: in STD_LOGIC;
                CLK   : in  STD_LOGIC
            );
     end component;
@@ -58,15 +58,15 @@ architecture behav of fifo_32b_tb is
         --  Component instantiation.
         fifo_0: fifo_32b
         port map (CLK => outer_clk,
-                  Final_in => final_in,
-                  Final_out => final_out,
-                  Din => outer_input,
-                  Wr => outer_wr_en,
-                  Dout => outer_output,
-                  Rd => outer_rd_en,
-                  Empty => outer_empty,
-                  Full => outer_full,
-                  Reset => outer_reset);
+                  FINAL_IN => final_in,
+                  FINAL_OUT => final_out,
+                  BLK_IN => outer_input,
+                  WR_EN => outer_wr_en,
+                  BLK_OUT => outer_output,
+                  RD_EN => outer_rd_en,
+                  EMPTY => outer_empty,
+                  FULL => outer_full,
+                  RESET => outer_reset);
 
         --  This process does the real job.
         process

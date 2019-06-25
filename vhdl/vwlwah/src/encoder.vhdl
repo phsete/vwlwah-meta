@@ -10,16 +10,16 @@ entity encoder is
                 fill_counter_size:   natural := 32
             );
     port (
-             clk:           in std_logic;
-             blk_in:        in std_logic_vector(word_size-2 downto 0);
-             in_empty:      in std_logic;
-             out_full:      in std_logic;
-             blk_out:       out std_logic_vector(word_size-1 downto 0);
-             in_rd:         out std_logic;
-             out_wr:        out std_logic;
-             final_in:      in std_logic;
-             final_out:     out std_logic;
-             reset:         in std_logic
+             CLK:           in std_logic;
+             BLK_IN:        in std_logic_vector(word_size-2 downto 0);
+             IN_EMPTY:      in std_logic;
+             OUT_FULL:      in std_logic;
+             BLK_OUT:       out std_logic_vector(word_size-1 downto 0);
+             IN_RD:         out std_logic;
+             OUT_WR:        out std_logic;
+             FINAL_IN:      in std_logic;
+             FINAL_OUT:     out std_logic;
+             RESET:         in std_logic
          );
 
 end encoder;
@@ -35,13 +35,13 @@ architecture IMP of encoder is
     signal input_buffer:        std_logic_vector(word_size-2 downto 0);
     signal literal_buffer:      std_logic_vector(word_size-2 downto 0);
     signal output_buffer:       std_logic_vector(word_size-1 downto 0);
-    signal out_wr_loc:          std_logic;
+    signal OUT_WR_loc:          std_logic;
     signal running:             std_logic := '1';
     signal final:               boolean := false;
     signal buffer_type:         Word := W_NONE;
 
 begin
-    process (clk)
+    process (CLK)
 
         -- writes a literal word to the output buffer
         function emit_literal (content: std_logic_vector(word_size-2 downto 0)) return std_logic_vector is
@@ -89,11 +89,11 @@ begin
             if (num_fill_words > 0) then
                 buffer_type <= W_0FILL_1FILL;
                 num_fill_words <= num_fill_words - 1;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             else
                 buffer_type <= W_NONE;
                 zero_fill_length <= to_unsigned(0, fill_counter_size); num_fill_words <= 0;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
 
                 -- output done, finally start new one fill
                 one_fill_length <= one_fill_length + 1;
@@ -107,12 +107,12 @@ begin
             if (num_fill_words > 0) then
                 buffer_type <= W_1FILL_0FILL;
                 num_fill_words <= num_fill_words - 1;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             else
                 buffer_type <= W_NONE;
                 one_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
 
                 -- output done, finally start new zero fill
                 zero_fill_length <= zero_fill_length + 1;
@@ -128,14 +128,14 @@ begin
                 -- backup input for later use
                 literal_buffer <= input_buffer;
                 num_fill_words <= num_fill_words - 1;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             else
                 buffer_type <= W_LITERAL;
                 -- backup input for later use
                 literal_buffer <= input_buffer;
                 zero_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             end if;
         end procedure;
 
@@ -147,14 +147,14 @@ begin
                 -- backup input for later use
                 literal_buffer <= input_buffer;
                 num_fill_words <= num_fill_words - 1;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             else
                 buffer_type <= W_LITERAL;
                 -- backup input for later use
                 literal_buffer <= input_buffer;
                 one_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             end if;
         end procedure;
 
@@ -164,14 +164,14 @@ begin
             if (num_fill_words > 0) then
                 buffer_type <= W_0FILL;
                 num_fill_words <= num_fill_words - 1;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             else
                 buffer_type <= W_NONE;
                 zero_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
                 if (final) then
-                    final_out <= '1';
+                    FINAL_OUT <= '1';
                 end if;
             end if;
         end procedure;
@@ -182,31 +182,31 @@ begin
             if (num_fill_words > 0) then
                 buffer_type <= W_1FILL;
                 num_fill_words <= num_fill_words - 1;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
             else
                 buffer_type <= W_NONE;
                 one_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
-                out_wr_loc <= '1';
+                OUT_WR_loc <= '1';
                 if (final) then
-                    final_out <= '1';
+                    FINAL_OUT <= '1';
                 end if;
             end if;
         end procedure;
 
     begin
-        if (clk'event and clk='1') then
+        if (CLK'event and CLK='1') then
             if (running = '1') then
 
-                out_wr_loc <= '0';
+                OUT_WR_loc <= '0';
 
                 case buffer_type is
                     when W_LITERAL =>
                         output_buffer <= emit_literal(literal_buffer);
                         buffer_type <= W_NONE;
-                        out_wr_loc <= '1';
+                        OUT_WR_loc <= '1';
                         if (final) then
-                            final_out <= '1';
+                            FINAL_OUT <= '1';
                         end if;
                     when W_0FILL_1FILL =>
                         handle_0F_1F;
@@ -250,7 +250,7 @@ begin
                                 else
                                     output_buffer <= emit_literal(input_buffer);
                                     buffer_type <= W_NONE;
-                                    out_wr_loc <= '1';
+                                    OUT_WR_loc <= '1';
                                 end if;
                             end if;
                         elsif (final) then
@@ -262,14 +262,14 @@ begin
                         end if;
                 end case;
 
-                if (buffer_type = W_NONE and in_empty = '0') then
+                if (buffer_type = W_NONE and IN_EMPTY = '0') then
                     input_available <= '1';
                 else
                     input_available <= '0';
                 end if;
             end if;
 
-            if (reset = '1') then
+            if (RESET = '1') then
                 zero_fill_length <= to_unsigned(0, fill_counter_size);
                 one_fill_length <= to_unsigned(0, fill_counter_size);
                 num_fill_words <= 0;
@@ -280,19 +280,19 @@ begin
             end if;
         end if;
 
-        if (clk'event and clk='0') then
+        if (CLK'event and CLK='0') then
             if (input_available = '1' and not final) then
-                input_buffer <= blk_in;
-                if (final_in = '1') then
+                input_buffer <= BLK_IN;
+                if (FINAL_IN = '1') then
                     final <= true;
                 end if;
             end if;
 
-            if (out_wr_loc = '1' and out_full = '0') then               -- ready to write output value
-                blk_out <= output_buffer;
+            if (OUT_WR_loc = '1' and OUT_FULL = '0') then               -- ready to write output value
+                BLK_OUT <= output_buffer;
             end if;
 
-            if (out_full = '0') then
+            if (OUT_FULL = '0') then
                 running <= '1';
             else
                 running <= '0';
@@ -302,7 +302,7 @@ begin
 
     end process;
 
-    in_rd  <= '1' when buffer_type = W_NONE else '0';
-    out_wr <= out_wr_loc;
+    IN_RD  <= '1' when buffer_type = W_NONE else '0';
+    OUT_WR <= OUT_WR_loc;
 
 end IMP;
