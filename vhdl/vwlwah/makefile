@@ -11,7 +11,7 @@ MODULES=\
 	  inverter
 
 TESTBENCH=\
-	  logic_or_tb
+	  decoder_tb
 
 GHDL_CMD=ghdl
 
