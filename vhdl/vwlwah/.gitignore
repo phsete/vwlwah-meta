@@ -1,5 +1,7 @@
 *
 !/.gitignore
 !/makefile
+!/tb
 !/src
+!/tb/*.vhdl
 !/src/*.vhdl

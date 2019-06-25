@@ -26,7 +26,8 @@ run:
 
 compile:
 	mkdir -p bin
-	$(GHDL_CMD) -i --workdir=$(BINDIR) --work=work $(addprefix src/,$(addsuffix .vhdl,$(MODULES) $(TESTBENCH)))
+	$(GHDL_CMD) -i --workdir=$(BINDIR) --work=work $(addprefix src/,$(addsuffix .vhdl, $(MODULES)))
+	$(GHDL_CMD) -i --workdir=$(BINDIR) --work=work $(addprefix tb/,$(addsuffix .vhdl, $(TESTBENCH)))
 	$(GHDL_CMD) -m --workdir=$(BINDIR) --work=work $(TESTBENCH)
 
 dump:
