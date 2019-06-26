@@ -23,12 +23,12 @@ architecture behav of fifo_32b_tb is
     -- Declaration of the components that will be instantiated.
     component fifo_32b
         Generic (
-                    constant Addrbreite: natural := 3;
-                    constant Wortbreite: natural := 5
+                    constant addr_width: natural := 3;
+                    constant word_size: natural := 5
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (31 downto 0);
                WR_EN    : in  STD_LOGIC;
-               BLK_OUT  : out STD_LOGIC_VECTOR (Wortbreite-1 downto 0);
+               BLK_OUT  : out STD_LOGIC_VECTOR (word_size-1 downto 0);
                RD_EN    : in  STD_LOGIC;
                EMPTY : out STD_LOGIC;
                FULL  : out STD_LOGIC;

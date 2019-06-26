@@ -132,7 +132,7 @@ begin
         ----------------
 
         --
-        -- RESETs all internal signals to their default state if the RESET pin is high
+        -- resets all internal signals to their default state if the RESET pin is high
         --
         procedure check_RESET is
         begin

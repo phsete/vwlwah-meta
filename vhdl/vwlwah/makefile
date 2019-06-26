@@ -12,7 +12,7 @@ MODULES=\
 	  inverter
 
 TESTBENCH=\
-	  encoder_tb
+	  fifo_b32_tb
 
 GHDL_CMD=ghdl
 
