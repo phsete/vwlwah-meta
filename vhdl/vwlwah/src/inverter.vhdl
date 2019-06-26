@@ -77,7 +77,8 @@ begin
         --
         -- returns the inverse version of the input literal
         --
-        function invert_L (input: std_logic_vector(word_size-1 downto 0)) return std_logic_vector is
+        function invert_L (input: std_logic_vector(word_size-1 downto 0))
+        return std_logic_vector is
             variable output: std_logic_vector(word_size-1 downto 0);
         begin
             output(word_size-1) := input(word_size-1);

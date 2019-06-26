@@ -45,7 +45,8 @@ begin
         --
         -- returns the next b-bit word from the buffer
         --
-        impure function read_next return std_logic_vector is
+        impure function read_next
+        return std_logic_vector is
             variable word1: std_logic_vector(31 downto 0);
             variable word2: std_logic_vector(31 downto 0);
             variable bits_in_word1: natural;

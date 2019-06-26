@@ -76,8 +76,8 @@ begin
         -- concatenates the length of an encoded fill to the decoded old_fill_length and
         -- returns the result
         --
-        function parse_fill_length (old_fill_length:    unsigned(fill_counter_size-1 downto 0);
-                                    fill_word:          std_logic_vector(word_size-1 downto 0))
+        function parse_fill_length (old_fill_length: unsigned(fill_counter_size-1 downto 0);
+                                    fill_word: std_logic_vector(word_size-1 downto 0))
         return unsigned is
             variable new_fill_length: unsigned(fill_counter_size-1 downto 0);
         begin

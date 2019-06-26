@@ -12,7 +12,7 @@ MODULES=\
 	  inverter
 
 TESTBENCH=\
-	  inverter_tb
+	  logic_or_tb
 
 GHDL_CMD=ghdl
 
