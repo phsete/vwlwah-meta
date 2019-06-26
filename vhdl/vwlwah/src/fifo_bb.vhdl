@@ -59,7 +59,7 @@ begin
         -- appends a new 32-bit word at the end of the buffer
         --
 
-        procedure write_next (data_in: std_logic_vector(31 downto 0)) is
+        procedure write_next (data_in: std_logic_vector(word_size-1 downto 0)) is
         begin
             memory(to_integer(wrcnt)) <= unsigned(data_in);
             wrcnt <= wrcnt+1;

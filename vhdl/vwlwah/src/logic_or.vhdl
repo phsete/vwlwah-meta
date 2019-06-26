@@ -119,7 +119,8 @@ begin
         end parse_fill_length;
 
         --
-        -- get the type of an encoded word from its content
+        -- determine the word type of input_word by parsing the control bits
+        -- (MSB for literals and MSB, MSB-1 for fills)
         --
         function parse_word_type (input_word: std_logic_vector(word_size-1 downto 0)) return Word is
         begin
