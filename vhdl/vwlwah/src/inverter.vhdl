@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.log2;
 use ieee.math_real.ceil;
+use work.utils.all;
 
 entity inverter is
     Generic (
@@ -25,8 +26,6 @@ end inverter;
 
 architecture IMP of inverter is
 
-    type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
-
     signal current_word:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal output_buffer:       std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:     std_logic := '0';
@@ -38,55 +37,6 @@ architecture IMP of inverter is
 
 begin
     process (CLK)
-
-        --------------
-        -- FUNCTIOS --
-        --------------
-
-        --
-        -- determine the word type of input_word by parsing the control bits
-        -- (MSB for literals and MSB, MSB-1 for fills)
-        --
-        function parse_word_type (input_word: std_logic_vector(word_size-1 downto 0))
-        return Word is
-        begin
-            if input_word(word_size-1) = '0' then
-                return W_LITERAL;
-            elsif input_word(word_size-2) = '0' then
-                return W_0FILL;
-            elsif input_word(word_size-2) = '1' then
-                return W_1FILL;
-            else
-                return W_NONE;
-            end if;
-        end parse_word_type;
-
-        --
-        -- returns the inverse version of the input fill
-        --
-        function invert_F (input: std_logic_vector(word_size-1 downto 0))
-        return std_logic_vector is
-            variable output: std_logic_vector(word_size-1 downto 0) := (others => 'U');
-        begin
-            output(word_size-1) := input(word_size-1);
-            output(word_size-2) := not(input(word_size-2));
-            output(word_size-3 downto 0) := input(word_size-3 downto 0);
-            return output;
-        end invert_F;
-
-        --
-        -- returns the inverse version of the input literal
-        --
-        function invert_L (input: std_logic_vector(word_size-1 downto 0))
-        return std_logic_vector is
-            variable output: std_logic_vector(word_size-1 downto 0);
-        begin
-            output(word_size-1) := input(word_size-1);
-            for i in word_size-2 downto 0 loop
-                output(i) := not(input(i));
-            end loop;
-            return output;
-        end invert_L;
 
         ----------------
         -- PROCEDURES --
@@ -114,10 +64,10 @@ begin
         if (CLK'event and CLK = '1' and running = '1') then
             case current_type is
                 when W_0FILL | W_1FILL =>
-                    output_buffer <= invert_F(current_word);
+                    output_buffer <= invert_F(word_size, current_word);
                     out_wr_loc <= '1';
                 when W_LITERAL =>
-                    output_buffer <= invert_L(current_word);
+                    output_buffer <= invert_L(word_size, current_word);
                     out_wr_loc <= '1';
                 when others =>
                     out_wr_loc <= '0';
@@ -137,7 +87,7 @@ begin
             -- read the next word and push buffers forward
             if (input_available = '1' and not final) then
                 current_word <= BLK_IN;
-                current_type <= parse_word_type(BLK_IN);
+                current_type <= parse_word_type(word_size, BLK_IN);
             else
                 current_word <= (others => 'U');
                 current_type <= W_NONE;

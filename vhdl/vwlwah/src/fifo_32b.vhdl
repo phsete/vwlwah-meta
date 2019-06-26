@@ -38,9 +38,9 @@ architecture IMP of FIFO_32B is
 begin
     process (CLK)
         
-        ---------------
-        -- FUNCTIONS --
-        ---------------
+        ----------------------
+        -- IMPURE FUNCTIONS --
+        ----------------------
 
         --
         -- returns the next b-bit word from the buffer

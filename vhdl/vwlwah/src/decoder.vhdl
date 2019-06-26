@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.log2;
 use ieee.math_real.ceil;
+use work.utils.all;
 
 entity decoder is
     Generic (
@@ -25,8 +26,6 @@ end decoder;
 
 architecture IMP of decoder is
 
-    type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
-
     signal input_fill_length:   unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal output_fill_length:  unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal current_word_buffer: std_logic_vector(word_size-1 downto 0) := (others => 'U');
@@ -42,73 +41,6 @@ architecture IMP of decoder is
 
 begin
     process (CLK)
-
-        ---------------
-        -- FUNCTIONS --
-        ---------------
-
-        --
-        -- returns a decoded literal derived from the encoded input literal
-        --
-        function emit_literal (content: std_logic_vector(word_size-1 downto 0))
-        return std_logic_vector is
-        begin
-            -- determine output representation and write word to output buffer
-            return content(word_size-2 downto 0);
-        end emit_literal;
-
-        --
-        -- returns a decoded fill block of the given type
-        --
-        function emit_fill (fill_type: std_logic)
-        return std_logic_vector is
-            variable buf: std_logic_vector(word_size-2 downto 0);
-        begin
-            -- fill all bits of buf with the given type
-            for idx in word_size-2 downto 0 loop
-                buf(idx)    := fill_type;
-            end loop;
-
-            return buf;
-        end emit_fill;
-
-        --
-        -- concatenates the length of an encoded fill to the decoded old_fill_length and
-        -- returns the result
-        --
-        function parse_fill_length (old_fill_length: unsigned(fill_counter_size-1 downto 0);
-                                    fill_word: std_logic_vector(word_size-1 downto 0))
-        return unsigned is
-            variable new_fill_length: unsigned(fill_counter_size-1 downto 0);
-        begin
-            -- shift old fill length by the number of new bits from the next fill word
-            new_fill_length := shift_left(old_fill_length, word_size-2);
-
-            -- copy the newly obtained bits to the least significant positions of new_fill_length
-            for idx in word_size-3 downto 0 loop
-                new_fill_length(idx) := fill_word(idx);
-            end loop;
-
-            return new_fill_length;
-        end parse_fill_length;
-
-        --
-        -- determine the word type of input_word by parsing the control bits
-        -- (MSB for literals and MSB, MSB-1 for fills)
-        --
-        function parse_word_type (input_word: std_logic_vector(word_size-1 downto 0))
-        return Word is
-        begin
-            if input_word(word_size-1) = '0' then
-                return W_LITERAL;
-            elsif input_word(word_size-2) = '0' then
-                return W_0FILL;
-            elsif input_word(word_size-2) = '1' then
-                return W_1FILL;
-            else
-                return W_NONE;
-            end if;
-        end parse_word_type;
 
         ----------------
         -- PROCEDURES --
@@ -126,7 +58,7 @@ begin
                     -- if the buffer pipeline is stepped forward in the next cycle
                     -- prepare to output the current fill block
                     OUT_WR_loc <= '1';
-                    output_buffer <= emit_fill(fill_type);
+                    output_buffer <= decode_fill(word_size, fill_type);
                     -- increase number of output words
                     output_fill_length <= output_fill_length + 1;
                 end if;
@@ -135,14 +67,14 @@ begin
                     -- the current fill is not fully decoded yet
                     -- prepare to output the current fill block
                     OUT_WR_loc <= '1';
-                    output_buffer <= emit_fill(fill_type);
+                    output_buffer <= decode_fill(word_size, fill_type);
                     -- increase number of output words
                     output_fill_length <= output_fill_length + 1;
                 elsif (input_fill_length - output_fill_length = 1) then
                     -- the current fill ends with this output word
                     -- prepare to output the current fill block
                     OUT_WR_loc <= '1';
-                    output_buffer <= emit_fill(fill_type);
+                    output_buffer <= decode_fill(word_size, fill_type);
                     -- RESET both fill length counters
                     input_fill_length <= (others => '0');
                     output_fill_length <= (others => '0');
@@ -163,7 +95,7 @@ begin
         procedure handle_L is
         begin
             -- prepare to output the current literal word
-            output_buffer <= emit_literal(current_word_buffer);
+            output_buffer <= decode_literal(word_size, current_word_buffer);
             OUT_WR_loc <= '1';
 
             if (final) then
@@ -226,10 +158,10 @@ begin
                 if next_type = W_0FILL or next_type = W_1FILL then
                     -- the next word to handle is a fill word
                     -- --> decode it's length
-                    input_fill_length <= parse_fill_length(input_fill_length, next_word_buffer);
+                    input_fill_length <= parse_fill_length(word_size, fill_counter_size, input_fill_length, next_word_buffer);
 
                     -- determine whether or not to continue reading in the next cycle
-                    if (parse_fill_length(input_fill_length, next_word_buffer) > output_fill_length + 1) then
+                    if (parse_fill_length(word_size, fill_counter_size, input_fill_length, next_word_buffer) > output_fill_length + 1) then
                         IN_RD_loc <= '0';
                     else
                         IN_RD_loc <= '1';
@@ -246,7 +178,7 @@ begin
                 if (input_available = '1') then
                     -- there is a next word available. read it.
                     next_word_buffer <= BLK_IN;
-                    next_type <= parse_word_type(BLK_IN);
+                    next_type <= parse_word_type(word_size, BLK_IN);
                 else
                     -- final state is reached. the next word is undefined
                     next_word_buffer <= (others => 'U');

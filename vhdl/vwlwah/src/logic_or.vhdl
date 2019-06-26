@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.log2;
 use ieee.math_real.ceil;
+use work.utils.all;
 
 entity logic_or is
     Generic (
@@ -25,8 +26,6 @@ entity logic_or is
 end logic_or;
 
 architecture IMP of logic_or is
-
-    type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
     signal output_buffer:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:      std_logic_vector(0 to num_inputs-1)    := (others => '0');
@@ -57,171 +56,6 @@ architecture IMP of logic_or is
 begin
     process (CLK)
 
-        ---------------
-        -- FUNCTIONS --
-        ---------------
-
-        --
-        -- returns an encoded literal word with the given content
-        --
-        function emit_literal (content: std_logic_vector(word_size-2 downto 0))
-        return std_logic_vector is
-            variable buf: std_logic_vector(word_size-1 downto 0);
-        begin
-            -- set control bit and copy word contents
-            buf(word_size-1) := '0';
-            buf(word_size-2 downto 0) := content;
-            return buf;
-        end emit_literal;
-
-        --
-        -- returns an encoded fill word of the given type.
-        -- the total length of the fill is gven by the parameter length.
-        -- for concatenated fills, word_no is the reversed position of the fill word inside the concatenated group
-        --
-        function emit_fill (fill_type:  std_logic;
-                            length: unsigned;
-                            word_no: natural)
-        return std_logic_vector is
-            variable length_vector: std_logic_vector(fill_counter_size-1 downto 0);
-            variable lowest_bit_idx: natural;
-            variable buf: std_logic_vector(word_size-1 downto 0);
-        begin
-            length_vector := std_logic_vector(length);
-            lowest_bit_idx := word_no * (word_size-2);
-
-            -- set control bits
-            buf(word_size-1)          := '1';
-            buf(word_size-2)          := fill_type;
-
-            -- copy the related (word_size-2) bits of the length representation vector
-            buf(word_size-3 downto 0) := length_vector(lowest_bit_idx + (word_size-3) downto lowest_bit_idx);
-            return buf;
-        end emit_fill;
-
-        --
-        -- returns the number of fill words needed to represent a fill of the given length
-        --
-        function fill_words_needed (length: unsigned)
-        return natural is
-        begin
-            for i in fill_counter_size-1 downto 0 loop
-                if length(i) = '1' then
-                    return (i / (word_size-2)) + 1;
-                end if;
-            end loop;
-            return 0;
-        end fill_words_needed;
-
-        --
-        -- concatenates the length of an encoded fill to the decoded old_fill_length and
-        -- returns the result
-        --
-        function parse_fill_length (old_fill_length: unsigned(fill_counter_size-1 downto 0);
-                                    fill_word: std_logic_vector(word_size-1 downto 0))
-        return unsigned is
-            variable new_fill_length: unsigned(fill_counter_size-1 downto 0);
-        begin
-            -- shift old fill length by the number of new bits from the next fill word
-            new_fill_length := shift_left(old_fill_length, word_size-2);
-
-            -- copy the newly obtained bits to the least significant positions of new_fill_length
-            for idx in word_size-3 downto 0 loop
-                new_fill_length(idx) := fill_word(idx);
-            end loop;
-
-            return new_fill_length;
-        end parse_fill_length;
-
-        --
-        -- determine the word type of input_word by parsing the control bits
-        -- (MSB for literals and MSB, MSB-1 for fills)
-        --
-        function parse_word_type (input_word: std_logic_vector(word_size-1 downto 0))
-        return Word is
-        begin
-            if input_word(word_size-1) = '0' then
-                return W_LITERAL;
-            elsif input_word(word_size-2) = '0' then
-                return W_0FILL;
-            elsif input_word(word_size-2) = '1' then
-                return W_1FILL;
-            else
-                return W_NONE;
-            end if;
-        end parse_word_type;
-
-        --
-        -- determine the type of input_word by parsing identifying the contents as fill or literal
-        --
-        function parse_block_type (input_word: std_logic_vector(word_size-2 downto 0))
-        return Word is
-            variable one_fill: boolean := true;
-            variable zero_fill: boolean := true;
-        begin
-            for bit_idx in 0 to word_size-2 loop
-                case input_word(bit_idx) is
-                    when '0' =>
-                        one_fill := false;
-                    when '1' =>
-                        zero_fill := false;
-                    when others =>
-                        return W_NONE;
-                end case;
-            end loop;
-
-            if zero_fill then
-                return W_0FILL;
-            elsif one_fill then
-                return W_1FILL;
-            else
-                return W_LITERAL;
-            end if;
-        end parse_block_type;
-
-        --
-        -- actual implementation of the logic or function
-        --
-        function logic_function (in0, in1: std_logic_vector(word_size-2 downto 0))
-        return std_logic_vector is
-        begin
-            return in0 or in1;
-        end logic_function;
-        
-        --
-        -- convert boolean to std_logic
-        --
-        function to_std_logic (input: boolean)
-        return std_logic is
-        begin
-            if input then
-                return '1';
-            else
-                return '0';
-            end if;
-        end to_std_logic;
-
-        --
-        -- decodes the literal representation of a single block
-        -- for fill words only a single representative block is returned
-        --
-        function decode_single (input_block: std_logic_vector(word_size-1 downto 0))
-        return std_logic_vector is
-            variable decoded_block: std_logic_vector(word_size-2 downto 0) := (others => 'U');
-            variable word_type: Word := parse_word_type(input_block);
-        begin
-            case word_type is
-                when W_LITERAL =>
-                    decoded_block := input_block(word_size-2 downto 0);
-                when W_0FILL =>
-                    decoded_block := (others => '0');
-                when W_1FILL =>
-                    decoded_block := (others => '1');
-                when others =>
-            end case;
-            return decoded_block;
-        end decode_single;
-
         --
         -- apply logic function to all inputs
         --
@@ -229,10 +63,10 @@ begin
         return std_logic_vector is
             variable output_block: std_logic_vector(word_size-2 downto 0) := (others => 'U');
         begin
-            output_block := decode_single(input_words(0));
+            output_block := decode_single(word_size, input_words(0));
             for input_idx in 1 to num_inputs-1 loop
                 -- use the logic function to map all inputs and obtain a single output
-                output_block := logic_function(output_block, decode_single(input_words(input_idx)));
+                output_block := logic_function(output_block, decode_single(word_size, input_words(input_idx)));
             end loop;
             return output_block;
         end get_output_block_value;
@@ -380,10 +214,10 @@ begin
                     --prepare for next fill
                     if (current_type(input_idx) = next_type(input_idx)) then
                         -- an old fill is extended
-                        new_fill_length := parse_fill_length(input_length(input_idx), next_word(input_idx));
+                        new_fill_length := parse_fill_length(word_size, fill_counter_size, input_length(input_idx), next_word(input_idx));
                     else
                         -- a new fill begins
-                        new_fill_length := parse_fill_length((others => '0') , next_word(input_idx));
+                        new_fill_length := parse_fill_length(word_size, fill_counter_size, to_unsigned(0, fill_counter_size) , next_word(input_idx));
                         consumed_length(input_idx) <= (others => '0');
                     end if;
 
@@ -416,7 +250,7 @@ begin
                     -- not final, read the respective input block
                     new_read_word := BLK_IN(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
                     next_word(input_idx) <= new_read_word;
-                    next_type(input_idx) <= parse_word_type(new_read_word);
+                    next_type(input_idx) <= parse_word_type(word_size, new_read_word);
                 else
                     -- final, fill buffers with empty words
                     next_word(input_idx) <= (others => 'U');
@@ -441,22 +275,22 @@ begin
                 -- begin a new output
                 consume(consumable_length);
                 output_length <= consumable_length;
-                output_words_left <= fill_words_needed(consumable_length); -- does also work for literals
+                output_words_left <= fill_words_needed(word_size, fill_counter_size, consumable_length); -- does also work for literals
                 next_output_block <= get_output_block_value(current_word);
                 out_wr_loc <= '0';
             elsif (done_reading and output_words_left > 0) then
                 -- extend the previous output
-                case parse_block_type(next_output_block) is
+                case parse_block_type(word_size, next_output_block) is
                     when W_0FILL =>
-                        output_buffer <= emit_fill('0', output_length, output_words_left - 1);
+                        output_buffer <= encode_fill(word_size, fill_counter_size, '0', output_length, output_words_left - 1);
                         output_words_left <=  output_words_left- 1;
                         out_wr_loc <= '1';
                     when W_1FILL =>
-                        output_buffer <= emit_fill('1', output_length, output_words_left - 1);
+                        output_buffer <= encode_fill(word_size, fill_counter_size, '1', output_length, output_words_left - 1);
                         output_words_left <= output_words_left - 1;
                         out_wr_loc <= '1';
                     when W_LITERAL =>
-                        output_buffer <= emit_literal(next_output_block);
+                        output_buffer <= encode_literal(word_size, next_output_block);
                         output_words_left <= output_words_left - 1;
                         out_wr_loc <= '1';
                     when others =>
