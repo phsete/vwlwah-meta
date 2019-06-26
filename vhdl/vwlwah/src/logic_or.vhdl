@@ -135,7 +135,7 @@ begin
         end parse_word_type;
 
         --
-        -- get the type of an unencoded word from its content
+        -- determine the type of input_word by parsing identifying the contents as fill or literal
         --
         function parse_block_type (input_word: std_logic_vector(word_size-2 downto 0)) return Word is
             variable one_fill: boolean := true;
