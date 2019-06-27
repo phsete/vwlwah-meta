@@ -280,7 +280,8 @@ begin
                 end if;
             else
                 -- if no word was read, check consumed length to determine next read state
-                if (input_length(input_idx) > consumed_length(input_idx) + 1) then
+                -- TODO: >0? >1? oder output_words_left vergleichen?
+                if (input_length(input_idx) - consumed_length(input_idx) > 0) then
                     in_rd_loc(input_idx) <= '0';
                 else
                     in_rd_loc(input_idx) <= '1';
@@ -306,7 +307,7 @@ begin
                                         = get_output_block_value(consumable_length))
                                         and parse_block_type(word_size, next_output_block) /= W_LITERAL;
                 out_wr_loc <= '0';
-            elsif (done_reading) then
+            elsif (done_reading and output_words_left > 0) then
                 -- start emitting the previously determined output
                 case parse_block_type(word_size, current_output_block) is
                     when W_0FILL =>
