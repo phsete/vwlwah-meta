@@ -36,11 +36,11 @@ compile:
 
 dump:
 	rm -f dump
-	ghdl -r $(TESTBENCH) --trace-signals > dump
+	$(GHDL_CMD) -r $(TESTBENCH) --trace-signals > dump
 
 wave:
 	rm -f wave.ghw
-	ghdl -r $(TESTBENCH) --wave=wave.ghw
+	$(GHDL_CMD) -r $(TESTBENCH) --wave=wave.ghw
 
 clean:
 	$(GHDL_CMD) --clean --workdir=$(BINDIR)

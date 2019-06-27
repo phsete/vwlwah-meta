@@ -49,24 +49,43 @@ architecture IMP of logic_or is
     signal current_type:         type_array(0 to num_inputs-1) := (others => W_NONE);
     signal next_type:            type_array(0 to num_inputs-1) := (others => W_NONE);
 
+    signal current_output_block: std_logic_vector(word_size-2 downto 0);
     signal next_output_block:    std_logic_vector(word_size-2 downto 0);
 
     signal final_received:       std_logic_vector(0 to num_inputs-1) := (others => '0');
+
+    signal continue_last_output: boolean := true;
 
 begin
     process (CLK)
 
         --
+        -- returns the decoded block value of input no "input_idx" at offset "offset"
+        --
+        impure function get_input_block_at (input_idx: natural; offset: unsigned)
+        return std_logic_vector is
+        begin
+            if (offset < input_length(input_idx) - consumed_length(input_idx)) then
+                    -- offset points to the current word
+                return decode_single(word_size, current_word(input_idx));
+            else
+                    -- offset is too large, use the next word
+                return decode_single(word_size, next_word(input_idx));
+            end if;
+        end get_input_block_at;
+
+        --
         -- apply logic function to all inputs
         --
-        function get_output_block_value (input_words: word_array(0 to num_inputs-1))
+        impure function get_output_block_value (offset: unsigned)
         return std_logic_vector is
             variable output_block: std_logic_vector(word_size-2 downto 0) := (others => 'U');
         begin
-            output_block := decode_single(word_size, input_words(0));
+            output_block := get_input_block_at(0, offset);
             for input_idx in 1 to num_inputs-1 loop
+                -- select the input block by using the given offset
                 -- use the logic function to map all inputs and obtain a single output
-                output_block := logic_function(output_block, decode_single(word_size, input_words(input_idx)));
+                output_block := logic_function(output_block, get_input_block_at(input_idx, offset));
             end loop;
             return output_block;
         end get_output_block_value;
@@ -89,7 +108,7 @@ begin
                 done_loc := (current_type(input_idx) = W_0FILL or current_type(input_idx) = W_1FILL);
                 done_loc := done_loc and (current_type(input_idx) /= next_type(input_idx));
                 done_loc := done_loc or (current_type(input_idx) = W_LITERAL);
-                done_loc := done_loc or (current_type(input_idx) = W_NONE);
+                done_loc := done_loc or (current_type(input_idx) = W_NONE and final_received(input_idx) = '1');
                 -- aggregate local reading states
                 done := done and done_loc;
             end loop;
@@ -171,6 +190,7 @@ begin
                 output_buffer         <= (others => 'U');
                 input_available       <= (others => '0');
                 in_rd_loc             <= (others => '0');
+                out_wr_loc            <= '0';
                 running               <= '1';
 
                 current_word          <= (others => (others => 'U'));
@@ -187,6 +207,8 @@ begin
                 next_type             <= (others => W_NONE);
 
                 final_received        <= (others => '0');
+
+                continue_last_output  <= true;
             end if;
         end procedure;
 
@@ -234,13 +256,13 @@ begin
                     input_length(input_idx) <= to_unsigned(1, fill_counter_size);
                     consumed_length(input_idx) <= (others => '0');
                     -- read further once all reading and writing is done
-                    in_rd_loc(input_idx) <= to_std_logic(done_reading and output_words_left = 0);
+                    in_rd_loc(input_idx) <= to_std_logic(done_reading and continue_last_output);
                 else
                     -- word type is unknown --> set everything to 0
                     input_length(input_idx) <= to_unsigned(0, fill_counter_size);
                     consumed_length(input_idx) <= (others => '0');
                     -- read further once all reading and writing is done
-                    in_rd_loc(input_idx) <= to_std_logic(done_reading and output_words_left = 0);
+                    in_rd_loc(input_idx) <= to_std_logic(done_reading and continue_last_output);
                 end if;
 
                 -- read the next word and push buffers forward
@@ -271,16 +293,22 @@ begin
         -- do logic and prepare output on rising edge of clock signal
         --
         if (CLK'event and CLK = '1' and running = '1') then
-            if (done_reading and output_words_left = 0) then
-                -- begin a new output
+            if (done_reading and continue_last_output) then
+                -- begin a new output or continue an existing one
                 consume(consumable_length);
-                output_length <= consumable_length;
+                output_length <= output_length + consumable_length;
                 output_words_left <= fill_words_needed(word_size, fill_counter_size, consumable_length); -- does also work for literals
-                next_output_block <= get_output_block_value(current_word);
+                current_output_block <= get_output_block_value(to_unsigned(0, fill_counter_size));
+                next_output_block <= get_output_block_value(consumable_length);
+
+                -- extend this output if it is a fill of the same type as the following one
+                continue_last_output <= (get_output_block_value(to_unsigned(0, fill_counter_size))
+                                        = get_output_block_value(consumable_length))
+                                        and parse_block_type(word_size, next_output_block) /= W_LITERAL;
                 out_wr_loc <= '0';
-            elsif (done_reading and output_words_left > 0) then
-                -- extend the previous output
-                case parse_block_type(word_size, next_output_block) is
+            elsif (done_reading) then
+                -- start emitting the previously determined output
+                case parse_block_type(word_size, current_output_block) is
                     when W_0FILL =>
                         output_buffer <= encode_fill(word_size, fill_counter_size, '0', output_length, output_words_left - 1);
                         output_words_left <=  output_words_left- 1;
@@ -290,12 +318,18 @@ begin
                         output_words_left <= output_words_left - 1;
                         out_wr_loc <= '1';
                     when W_LITERAL =>
-                        output_buffer <= encode_literal(word_size, next_output_block);
+                        output_buffer <= encode_literal(word_size, current_output_block);
                         output_words_left <= output_words_left - 1;
                         out_wr_loc <= '1';
                     when others =>
                         out_wr_loc <= '0';
                 end case;
+
+                -- reset output length on last word of current output
+                if (output_words_left = 1) then
+                    output_length <= to_unsigned(0, fill_counter_size);
+                    continue_last_output <= true;
+                end if;
             else
                 -- output isn't ready yet
                 out_wr_loc <= '0';
@@ -309,7 +343,7 @@ begin
         --
         if (CLK'event and CLK = '0') then
             for input_idx in 0 to num_inputs-1 loop
-                if (in_rd_loc(input_idx) = '1' or (running = '1' and output_words_left = 0)) then
+                if (in_rd_loc(input_idx) = '1' or (running = '1' and consumed_length(input_idx) = input_length(input_idx))) then
                     -- reading is intended or output is done and a new input is needed
                     if (input_available(input_idx) = '1' or final_received(input_idx) = '1') then
                         read_input(input_idx);
