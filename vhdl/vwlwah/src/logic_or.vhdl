@@ -355,7 +355,7 @@ begin
                     end if;
                 else
                     -- don't read in next cycle
-                    in_rd_loc <= (others => '0');
+                    in_rd_loc(input_idx) <= '0';
                 end if;
             end loop;
 
