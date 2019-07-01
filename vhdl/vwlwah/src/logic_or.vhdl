@@ -245,12 +245,8 @@ begin
 
                     input_length(input_idx) <= new_fill_length;
 
-                    if (new_fill_length > consumed_length(input_idx) + 1) then
-                        in_rd_loc(input_idx) <= '0';
-                    else
-                            -- perform lazy reading only when the fill is about to expire
-                        in_rd_loc(input_idx) <= '1';
-                    end if;
+                    -- continue reading to see whether or not the fill needs to be extended
+                    in_rd_loc(input_idx) <= '1';
                 elsif next_type(input_idx) = W_LITERAL then
                         -- prepare to handle a literal word
                     input_length(input_idx) <= to_unsigned(1, fill_counter_size);
@@ -276,8 +272,8 @@ begin
                     next_word(input_idx) <= new_read_word;
                     next_type(input_idx) <= parse_word_type(word_size, new_read_word);
                 else
-                    -- final, fill buffers with empty words
-                    -- TODO: is this needed? next_word(input_idx) <= (others => 'U');
+                    -- final buffer value is still needed
+                    -- --> keep next_word value but set it as invalid
                     next_type(input_idx) <= W_NONE;
                 end if;
             else
