@@ -25,7 +25,8 @@ BINDIR=bin
 all: compile
 
 run:
-	$(GHDL_CMD) -r $(TESTBENCH)
+	rm -f wave.ghw
+	$(GHDL_CMD) -r $(TESTBENCH) --wave=wave.ghw
 
 compile:
 	mkdir -p bin

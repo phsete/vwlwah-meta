@@ -245,11 +245,14 @@ begin
 
                     input_length(input_idx) <= new_fill_length;
 
-                    if ((consumed_length(input_idx) = input_length(input_idx)) or (parse_block_type(word_size, new_read_word) = next_type(input_idx))) then
-                        -- if all output is done, continue reading to see whether or not the fill needs to be extended
-                        in_rd_loc(input_idx) <= '1';
-                    else
-                        in_rd_loc(input_idx) <= '0';
+                    -- TODO: documentation                             \------- fails in last test ------/
+                    if (current_type(input_idx) = next_type(input_idx) or current_type(input_idx) = W_NONE) then
+                        if ((consumed_length(input_idx) = new_fill_length) or (parse_block_type(word_size, new_read_word) = next_type(input_idx))) then
+                            -- if all output is done, continue reading to see whether or not the fill needs to be extended
+                            in_rd_loc(input_idx) <= '1';
+                        else
+                            in_rd_loc(input_idx) <= '0';
+                        end if;
                     end if;
                 elsif next_type(input_idx) = W_LITERAL then
                         -- prepare to handle a literal word
