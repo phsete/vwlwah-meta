@@ -227,26 +227,30 @@ begin
         --
         procedure read_input (input_idx: natural) is
             variable new_fill_length: unsigned(fill_counter_size-1 downto 0);
-            variable new_read_word:   std_logic_vector(word_size-1 downto 0);
+            variable new_read_word:   std_logic_vector(word_size-1 downto 0) := BLK_IN(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
         begin
             if (in_rd_loc(input_idx) = '1') then
                 -- an input word is ready to be read into the next_word buffer
                 -- --> handle current next_word buffer content first as it will become the current word now
                 if next_type(input_idx) = W_0FILL or next_type(input_idx) = W_1FILL then
-                        --prepare for next fill
+                    --prepare for next fill
                     if (current_type(input_idx) = next_type(input_idx)) then
-                            -- an old fill is extended
+                        -- an old fill is extended
                         new_fill_length := parse_fill_length(word_size, fill_counter_size, input_length(input_idx), next_word(input_idx));
                     else
-                            -- a new fill begins
+                        -- a new fill begins
                         new_fill_length := parse_fill_length(word_size, fill_counter_size, to_unsigned(0, fill_counter_size) , next_word(input_idx));
                         consumed_length(input_idx) <= (others => '0');
                     end if;
 
                     input_length(input_idx) <= new_fill_length;
 
-                    -- continue reading to see whether or not the fill needs to be extended
-                    in_rd_loc(input_idx) <= '1';
+                    if ((consumed_length(input_idx) = input_length(input_idx)) or (parse_block_type(word_size, new_read_word) = next_type(input_idx))) then
+                        -- if all output is done, continue reading to see whether or not the fill needs to be extended
+                        in_rd_loc(input_idx) <= '1';
+                    else
+                        in_rd_loc(input_idx) <= '0';
+                    end if;
                 elsif next_type(input_idx) = W_LITERAL then
                         -- prepare to handle a literal word
                     input_length(input_idx) <= to_unsigned(1, fill_counter_size);
@@ -268,7 +272,6 @@ begin
                 current_type(input_idx) <= next_type(input_idx);
                 if (final_received(input_idx) = '0') then
                     -- not final, read the respective input block
-                    new_read_word := BLK_IN(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
                     next_word(input_idx) <= new_read_word;
                     next_type(input_idx) <= parse_word_type(word_size, new_read_word);
                 else
