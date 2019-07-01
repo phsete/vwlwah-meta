@@ -233,12 +233,12 @@ begin
                 -- an input word is ready to be read into the next_word buffer
                 -- --> handle current next_word buffer content first as it will become the current word now
                 if next_type(input_idx) = W_0FILL or next_type(input_idx) = W_1FILL then
-                    --prepare for next fill
+                        --prepare for next fill
                     if (current_type(input_idx) = next_type(input_idx)) then
-                        -- an old fill is extended
+                            -- an old fill is extended
                         new_fill_length := parse_fill_length(word_size, fill_counter_size, input_length(input_idx), next_word(input_idx));
                     else
-                        -- a new fill begins
+                            -- a new fill begins
                         new_fill_length := parse_fill_length(word_size, fill_counter_size, to_unsigned(0, fill_counter_size) , next_word(input_idx));
                         consumed_length(input_idx) <= (others => '0');
                     end if;
@@ -248,34 +248,36 @@ begin
                     if (new_fill_length > consumed_length(input_idx) + 1) then
                         in_rd_loc(input_idx) <= '0';
                     else
-                        -- perform lazy reading only when the fill is about to expire
+                            -- perform lazy reading only when the fill is about to expire
                         in_rd_loc(input_idx) <= '1';
                     end if;
                 elsif next_type(input_idx) = W_LITERAL then
-                    -- prepare to handle a literal word
+                        -- prepare to handle a literal word
                     input_length(input_idx) <= to_unsigned(1, fill_counter_size);
                     consumed_length(input_idx) <= (others => '0');
-                    -- read further once all reading and writing is done
+                        -- read further once all reading and writing is done
                     in_rd_loc(input_idx) <= to_std_logic(done_reading and continue_last_output);
                 else
-                    -- word type is unknown --> set everything to 0
-                    input_length(input_idx) <= to_unsigned(0, fill_counter_size);
-                    consumed_length(input_idx) <= (others => '0');
-                    -- read further once all reading and writing is done
-                    in_rd_loc(input_idx) <= to_std_logic(done_reading and continue_last_output);
+                    if final_received(input_idx) = '0' then
+                        -- word type is unknown --> set everything to 0
+                        input_length(input_idx) <= to_unsigned(0, fill_counter_size);
+                        consumed_length(input_idx) <= (others => '0');
+                        -- read further once all reading and writing is done
+                        in_rd_loc(input_idx) <= to_std_logic(done_reading and continue_last_output);
+                    end if;
                 end if;
 
                 -- read the next word and push buffers forward
                 current_word(input_idx) <= next_word(input_idx);
                 current_type(input_idx) <= next_type(input_idx);
-                if (not final_received(input_idx) = '1') then
+                if (final_received(input_idx) = '0') then
                     -- not final, read the respective input block
                     new_read_word := BLK_IN(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
                     next_word(input_idx) <= new_read_word;
                     next_type(input_idx) <= parse_word_type(word_size, new_read_word);
                 else
                     -- final, fill buffers with empty words
-                    next_word(input_idx) <= (others => 'U');
+                    -- TODO: is this needed? next_word(input_idx) <= (others => 'U');
                     next_type(input_idx) <= W_NONE;
                 end if;
             else
@@ -294,7 +296,7 @@ begin
         -- do logic and prepare output on rising edge of clock signal
         --
         if (CLK'event and CLK = '1' and running = '1') then
-            if (done_reading and continue_last_output) then
+            if (done_reading and continue_last_output and not is_final) then
                 -- begin a new output or continue an existing one
                 consume(consumable_length);
                 output_length <= output_length + consumable_length;
