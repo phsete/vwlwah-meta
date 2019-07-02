@@ -239,15 +239,15 @@ begin
                         new_fill_length := parse_fill_length(word_size, fill_counter_size, input_length(input_idx), next_word(input_idx));
                     else
                         -- a new fill begins
-                        new_fill_length := parse_fill_length(word_size, fill_counter_size, to_unsigned(0, fill_counter_size) , next_word(input_idx));
+                        new_fill_length := parse_fill_length(word_size, fill_counter_size, to_unsigned(0, fill_counter_size), next_word(input_idx));
                         consumed_length(input_idx) <= (others => '0');
                     end if;
 
                     input_length(input_idx) <= new_fill_length;
 
-                    -- TODO: documentation                             \------- fails in last test ------/
-                    if (current_type(input_idx) = next_type(input_idx) or current_type(input_idx) = W_NONE) then
-                        if ((consumed_length(input_idx) = new_fill_length) or (parse_block_type(word_size, new_read_word) = next_type(input_idx))) then
+                    -- TODO: documentation
+                    if ((current_type(input_idx) = next_type(input_idx)) or (current_type(input_idx) = W_NONE)) then
+                        if ((consumed_length(input_idx) = new_fill_length) or (parse_word_type(word_size, new_read_word) = next_type(input_idx))) then
                             -- if all output is done, continue reading to see whether or not the fill needs to be extended
                             in_rd_loc(input_idx) <= '1';
                         else
