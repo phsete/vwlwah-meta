@@ -144,7 +144,6 @@ begin
                                            and next_type(input_idx) = W_NONE
                                            and input_length(input_idx) = consumed_length(input_idx));
             end loop;
-            ret_value := ret_value and output_words_left <= 1;
             return ret_value;
         end is_final;
 
@@ -302,7 +301,7 @@ begin
                 -- begin a new output or continue an existing one
                 consume(consumable_length);
                 output_length <= output_length + consumable_length;
-                output_words_left <= fill_words_needed(word_size, fill_counter_size, consumable_length); -- does also work for literals
+                output_words_left <= fill_words_needed(word_size, fill_counter_size, output_length + consumable_length); -- does also work for literals
                 current_output_block <= get_output_block_value(to_unsigned(0, fill_counter_size));
                 next_output_block <= get_output_block_value(consumable_length);
 
@@ -340,7 +339,7 @@ begin
                 out_wr_loc <= '0';
             end if;
 
-            FINAL_OUT <= to_std_logic(is_final);
+            FINAL_OUT <= to_std_logic(is_final and output_words_left <= 1);
         end if;
 
         --
