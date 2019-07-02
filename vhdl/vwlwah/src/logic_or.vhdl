@@ -282,62 +282,83 @@ begin
                     next_type(input_idx) <= W_NONE;
                 end if;
             else
-                -- if no word was read, check consumed length to determine next read state
-                -- TODO: >0? >1? oder output_words_left vergleichen?
-                if (input_length(input_idx) - consumed_length(input_idx) > 0) then
-                    in_rd_loc(input_idx) <= '0';
-                else
-                    in_rd_loc(input_idx) <= '1';
-                end if;
+                -- all output is done but no word was read --> read in next cycle
+                in_rd_loc(input_idx) <= '1';
             end if;
         end procedure;
+
+        ---------------
+        -- VARIABLES --
+        ---------------
+
+        variable output_length_var: unsigned(fill_counter_size-1 downto 0) := (others => '0');
+        variable output_words_left_var: integer := 0;
+        variable continue_last_output_var: boolean := true;
+        variable current_output_block_var: std_logic_vector(word_size-2 downto 0) := (others => 'U');
+        variable next_output_block_var: std_logic_vector(word_size-2 downto 0) := (others => 'U');
 
     begin
         --
         -- do logic and prepare output on rising edge of clock signal
         --
         if (CLK'event and CLK = '1' and running = '1') then
+            -- initialize variables
+            output_length_var := output_length;
+            output_words_left_var := output_words_left;
+            continue_last_output_var := continue_last_output;
+            current_output_block_var := current_output_block;
+            next_output_block_var := next_output_block;
+
+            -- TODO: reverse meaning of continue_last_output
             if (done_reading and continue_last_output and not is_final) then
                 -- begin a new output or continue an existing one
                 consume(consumable_length);
-                output_length <= output_length + consumable_length;
-                output_words_left <= fill_words_needed(word_size, fill_counter_size, output_length + consumable_length); -- does also work for literals
-                current_output_block <= get_output_block_value(to_unsigned(0, fill_counter_size));
-                next_output_block <= get_output_block_value(consumable_length);
+                output_length_var := output_length + consumable_length;
+                output_words_left_var := fill_words_needed(word_size, fill_counter_size, output_length_var); -- does also work for literals
+                current_output_block_var := get_output_block_value(to_unsigned(0, fill_counter_size));
+                next_output_block_var := get_output_block_value(consumable_length);
 
                 -- extend this output if it is a fill of the same type as the following one
-                continue_last_output <= (get_output_block_value(to_unsigned(0, fill_counter_size))
+                continue_last_output_var := (get_output_block_value(to_unsigned(0, fill_counter_size))
                                         = get_output_block_value(consumable_length))
                                         and parse_block_type(word_size, next_output_block) /= W_LITERAL;
+
                 out_wr_loc <= '0';
-            elsif (done_reading and output_words_left > 0) then
+            elsif (done_reading and output_words_left_var > 0) then
                 -- start emitting the previously determined output
-                case parse_block_type(word_size, current_output_block) is
+                case parse_block_type(word_size, current_output_block_var) is
                     when W_0FILL =>
-                        output_buffer <= encode_fill(word_size, fill_counter_size, '0', output_length, output_words_left - 1);
-                        output_words_left <=  output_words_left- 1;
+                        output_buffer <= encode_fill(word_size, fill_counter_size, '0', output_length_var, output_words_left_var - 1);
+                        output_words_left_var :=  output_words_left_var - 1;
                         out_wr_loc <= '1';
                     when W_1FILL =>
-                        output_buffer <= encode_fill(word_size, fill_counter_size, '1', output_length, output_words_left - 1);
-                        output_words_left <= output_words_left - 1;
+                        output_buffer <= encode_fill(word_size, fill_counter_size, '1', output_length_var, output_words_left_var - 1);
+                        output_words_left_var := output_words_left_var - 1;
                         out_wr_loc <= '1';
                     when W_LITERAL =>
-                        output_buffer <= encode_literal(word_size, current_output_block);
-                        output_words_left <= output_words_left - 1;
+                        output_buffer <= encode_literal(word_size, current_output_block_var);
+                        output_words_left_var := output_words_left_var - 1;
                         out_wr_loc <= '1';
                     when others =>
                         out_wr_loc <= '0';
                 end case;
 
                 -- reset output length on last word of current output
-                if (output_words_left = 1) then
-                    output_length <= to_unsigned(0, fill_counter_size);
-                    continue_last_output <= true;
+                if (output_words_left_var = 0) then
+                    output_length_var := to_unsigned(0, fill_counter_size);
+                    continue_last_output_var := true;
                 end if;
             else
                 -- output isn't ready yet
                 out_wr_loc <= '0';
             end if;
+
+                -- persist variables
+            output_length <= output_length_var;
+            output_words_left <= output_words_left_var;
+            continue_last_output <= continue_last_output_var;
+            current_output_block <= current_output_block_var;
+            next_output_block <= next_output_block_var;
 
             FINAL_OUT <= to_std_logic(is_final and output_words_left <= 1);
         end if;
