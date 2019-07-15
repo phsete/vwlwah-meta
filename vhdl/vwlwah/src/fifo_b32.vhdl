@@ -88,7 +88,7 @@ begin
         --
         procedure check_reset is
         begin
-            if (RESET = '1') then
+            if (RESET = '0') then
                 rdcnt       <= (others => '0');
                 wrcnt       <= (others => '0');
                 wrpos       <= (others => '1');

@@ -90,7 +90,7 @@ begin
         --
         procedure check_reset is
         begin
-            if (RESET = '1') then
+            if (RESET = '0') then
                 wrcnt       <= (others => '0');
                 rdcnt       <= (others => '0');
                 rdpos       <= (others => '1');

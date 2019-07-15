@@ -47,7 +47,7 @@ begin
         --
         procedure check_reset is
         begin
-            if (RESET = '1') then
+            if (RESET = '0') then
                 current_word    <= (others => 'U');
                 output_buffer   <= (others => 'U');
                 input_available <= '0';

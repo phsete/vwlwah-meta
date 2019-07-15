@@ -185,7 +185,7 @@ begin
         --
         procedure check_RESET is
         begin
-            if (RESET = '1') then
+            if (RESET = '0') then
                 output_buffer         <= (others => 'U');
                 input_available       <= (others => '0');
                 in_rd_loc             <= (others => '0');

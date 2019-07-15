@@ -109,7 +109,7 @@ begin
         --
         procedure check_RESET is
         begin
-            if (RESET = '1') then
+            if (RESET = '0') then
                 input_fill_length   <= (others => '0');
                 output_fill_length  <= (others => '0');
                 current_word_buffer <= (others => 'U');

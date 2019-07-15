@@ -52,7 +52,7 @@ begin
         --
         procedure check_RESET is
         begin
-            if (RESET = '1') then
+            if (RESET = '0') then
                 zero_fill_length    <= (others => '0');
                 one_fill_length     <= (others => '0');
                 input_buffer        <= (others => 'U');
