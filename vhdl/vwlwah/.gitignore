@@ -3,5 +3,7 @@
 !/makefile
 !/tb
 !/src
+!/src/axis
 !/tb/*.vhdl
 !/src/*.vhdl
+!/src/axis/*.vhd
