@@ -11,10 +11,12 @@ MODULES=\
 	  encoder \
 	  decoder \
 	  logic_or \
-	  inverter
+	  inverter \
+	  AXIS2FIFO_v1_0 \
+	  AXIS2FIFO_v1_0_S00_AXIS
 
 TESTBENCH=\
-	  logic_or_tb
+	  AXIS2FIFO_tb
 
 GHDL_CMD=ghdl
 

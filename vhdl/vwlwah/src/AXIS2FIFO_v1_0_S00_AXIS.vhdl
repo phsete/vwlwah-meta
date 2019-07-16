@@ -42,17 +42,12 @@ signal axis_tready	: std_logic;
 signal  mst_exec_state : state;  
 
 -- FIFO implementation signals
--- FIFO write enable
-signal fifo_wren : std_logic;
 -- FIFO full flag
 signal fifo_full_flag : std_logic;
 -- sink has accepted all the streaming data and stored in FIFO
 signal writes_done : std_logic; -- TODO: what does this do?
 
 begin
-    -- I/O Connections assignments
-
-    S_AXIS_TREADY <= axis_tready;
     -- Control state machine implementation
     process(S_AXIS_ACLK)
     begin
@@ -91,45 +86,35 @@ begin
     -- 
     -- The connected FIFO is always ready to accept the S_AXIS_TDATA  until
     -- the FIFO is not filled (inputFull input)
-    axis_tready <= '1' when ((mst_exec_state = WRITE_FIFO) and (inputFull = '0')) else '0';
+    axis_tready <= '1' when (inputAlmostFull = '0' and inputFull = '0') else '0';
+    S_AXIS_TREADY <= axis_tready;
 
     process(S_AXIS_ACLK)
     begin
         if (rising_edge (S_AXIS_ACLK)) then
             if(S_AXIS_ARESETN = '0') then
                 writes_done <= '0';
+                inputWren <= '0';
+                inputFinal <= '0';
             else
                 if (inputFull = '0') then
-                    inputWren <= fifo_wren;
-                    if (fifo_wren = '1') then
+                    if (S_AXIS_TVALID = '1' and inputAlmostFull = '0' and inputFull = '0') then
+                        inputWren <= '1';
                         writes_done <= '0';
                         inputData <= S_AXIS_TDATA;
+                    else
+                        inputWren <= '0';
                     end if;
                     if (inputAlmostFull = '1' or inputFull = '1') then
-                        -- reads_done is asserted when NUMBER_OF_INPUT_WORDS numbers of streaming data 
-                        -- has been written to the FIFO which is also marked by S_AXIS_TLAST(kept for optional usage).
                         writes_done <= '1';
                     end if;
                     if (S_AXIS_TLAST = '1') then
                         inputFinal <= '1';
                         writes_done <= '1';
                     end if;
+                else
+                    inputWren <= '0';
                 end if;
-            end if;
-        end if;
-    end process;
-
-    -- FIFO write enable generation
-    fifo_wren <= S_AXIS_TVALID and axis_tready;
-
-    process (S_AXIS_ACLK)
-    begin
-        if (rising_edge (S_AXIS_ACLK)) then
-            if (S_AXIS_TVALID = '1') then
-                inputData <= S_AXIS_TDATA;
-                inputWren <= '1';
-            else
-                inputWren <= '0';
             end if;
         end if;
     end process;

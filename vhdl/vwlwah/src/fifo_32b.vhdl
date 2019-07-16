@@ -18,6 +18,7 @@ entity FIFO_32B is
         BLK_OUT:                out std_logic_vector (word_size-1 downto 0);
         EMPTY:                  out std_logic;
         FULL:                   out std_logic;
+        ALMOST_FULL:            out std_logic;
         FINAL_OUT:              out std_logic
     );
 end FIFO_32B;
@@ -32,6 +33,7 @@ architecture IMP of FIFO_32B is
     type speicher is array(0 to (2**addr_width)-1) of unsigned(31 downto 0);
     signal memory : speicher;   
     signal full_loc  : std_logic;
+    signal almost_full_loc  : std_logic;
     signal empty_loc : std_logic;
     signal final_out_loc:  std_logic;
 
@@ -125,8 +127,10 @@ begin
 
     final_out_loc   <= '1' when (final and ((rdcnt=final_idx and rdpos < word_size-1) or rdcnt=final_idx+1))    else '0';
     full_loc        <= '1' when (rdcnt = wrcnt+1)                                                               else '0';
+    almost_full_loc <= '1' when (rdcnt = wrcnt+2)                                                               else '0';
     empty_loc       <= '1' when (rdcnt = wrcnt) or (rdcnt+1 = wrcnt and rdpos < word_size-1)                    else '0';
     FINAL_OUT       <= final_out_loc;
     FULL            <= full_loc;
+    ALMOST_FULL     <= almost_full_loc;
     EMPTY           <= empty_loc;
 end IMP;

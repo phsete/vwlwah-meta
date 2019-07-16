@@ -18,6 +18,7 @@ entity FIFO_B32 is
         BLK_OUT:                out std_logic_vector (31 downto 0);
         EMPTY:                  out std_logic;
         FULL:                   out std_logic;
+        ALMOST_FULL:            out std_logic;
         FINAL_OUT:              out std_logic
     );
 end FIFO_B32;
@@ -33,6 +34,7 @@ architecture IMP of FIFO_B32 is
     signal memory : speicher;   
     signal final_out_loc : std_logic;
     signal full_loc  : std_logic;
+    signal almost_full_loc  : std_logic;
     signal empty_loc : std_logic;
 
 begin
@@ -123,8 +125,10 @@ begin
 
     final_out_loc   <= '1' when (final and (rdcnt = final_idx +1))  else '0';
     full_loc        <= '1' when (rdcnt = wrcnt+1)                   else '0';
+    almost_full_loc <= '1' when (rdcnt = wrcnt+2)                   else '0';
     empty_loc       <= '1' when (rdcnt = wrcnt)                     else '0';
     FINAL_OUT       <= final_out_loc;
     FULL            <= full_loc;
+    ALMOST_FULL     <= almost_full_loc;
     EMPTY           <= empty_loc;
 end IMP;
