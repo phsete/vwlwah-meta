@@ -112,10 +112,10 @@ begin
                 if (M_AXIS_TREADY = '1') then
                     axis_tlast <= outputFinal and outputRden;
                     axis_tlast_delay <= axis_tlast;
+                    outputEmpty_delay <= outputEmpty;
                 end if;
 
                 --axis_tvalid_delay <= axis_tvalid;
-                outputEmpty_delay <= outputEmpty;
                 tx_en_delay <= tx_en;
                 outputRden_delay <= outputRden;
 
@@ -140,7 +140,7 @@ begin
             else
                 if (M_AXIS_TREADY = '1') then
                     -- obtain data
-                    if (outputRden_delay = '1') then
+                    if (outputRden_delay = '1' or outputFinal = '1') then
                         buf_0 <= outputData;
                         valid_buf_0 <= outputEmpty_delay = '0';
                     end if;
