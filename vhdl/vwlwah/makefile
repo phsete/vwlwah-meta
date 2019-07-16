@@ -13,10 +13,12 @@ MODULES=\
 	  logic_or \
 	  inverter \
 	  AXIS2FIFO_v1_0 \
-	  AXIS2FIFO_v1_0_S00_AXIS
+	  AXIS2FIFO_v1_0_S00_AXIS \
+	  FIFO2AXIS_v1_0 \
+	  FIFO2AXIS_v1_0_M00_AXIS
 
 TESTBENCH=\
-	  AXIS2FIFO_tb
+	  FIFO2AXIS_tb
 
 GHDL_CMD=ghdl
 

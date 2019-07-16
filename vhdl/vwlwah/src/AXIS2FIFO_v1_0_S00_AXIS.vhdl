@@ -32,85 +32,28 @@ entity AXIS2FIFO_v1_0_S00_AXIS is
 end AXIS2FIFO_v1_0_S00_AXIS;
 
 architecture arch_imp of AXIS2FIFO_v1_0_S00_AXIS is
--- Define the states of state machine
--- The control state machine oversees the writing of input streaming data to the FIFO,
--- and outputs the streaming data from the FIFO
-type state is (IDLE, WRITE_FIFO);
-
-signal axis_tready	: std_logic;
--- State variable
-signal  mst_exec_state : state;  
-
--- FIFO implementation signals
--- FIFO full flag
-signal fifo_full_flag : std_logic;
--- sink has accepted all the streaming data and stored in FIFO
-signal writes_done : std_logic; -- TODO: what does this do?
 
 begin
-    -- Control state machine implementation
-    process(S_AXIS_ACLK)
-    begin
-        if (rising_edge (S_AXIS_ACLK)) then
-            if(S_AXIS_ARESETN = '0') then
-                -- Synchronous reset (active low)
-                mst_exec_state <= IDLE;
-            else
-                case (mst_exec_state) is
-                    when IDLE => 
-                        -- The sink starts accepting tdata when 
-                        -- there tvalid is asserted to mark the
-                        -- presence of valid streaming data 
-                        if (S_AXIS_TVALID = '1')then
-                            mst_exec_state <= WRITE_FIFO;
-                        else
-                            mst_exec_state <= IDLE;
-                        end if;
-
-                    when WRITE_FIFO => 
-                        -- When the sink has accepted all the streaming input data,
-                        -- the interface swiches functionality to a streaming master
-                        if (writes_done = '1') then
-                            mst_exec_state <= IDLE;
-                        else
-                            -- The sink accepts and stores tdata 
-                            -- into FIFO
-                            mst_exec_state <= WRITE_FIFO;
-                        end if;
-                end case;
-            end if;  
-        end if;
-    end process;
-
-    -- AXI Streaming Sink 
-    -- 
-    -- The connected FIFO is always ready to accept the S_AXIS_TDATA  until
-    -- the FIFO is not filled (inputFull input)
-    axis_tready <= '1' when (inputAlmostFull = '0' and inputFull = '0') else '0';
-    S_AXIS_TREADY <= axis_tready;
+    S_AXIS_TREADY <= '1' when (inputAlmostFull = '0' and inputFull = '0') else '0';
 
     process(S_AXIS_ACLK)
     begin
         if (rising_edge (S_AXIS_ACLK)) then
             if(S_AXIS_ARESETN = '0') then
-                writes_done <= '0';
                 inputWren <= '0';
                 inputFinal <= '0';
             else
                 if (inputFull = '0') then
                     if (S_AXIS_TVALID = '1' and inputAlmostFull = '0' and inputFull = '0') then
                         inputWren <= '1';
-                        writes_done <= '0';
                         inputData <= S_AXIS_TDATA;
                     else
                         inputWren <= '0';
                     end if;
                     if (inputAlmostFull = '1' or inputFull = '1') then
-                        writes_done <= '1';
                     end if;
                     if (S_AXIS_TLAST = '1') then
                         inputFinal <= '1';
-                        writes_done <= '1';
                     end if;
                 else
                     inputWren <= '0';
