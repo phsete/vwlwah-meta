@@ -5,6 +5,16 @@ use ieee.numeric_std.all;
 package utils is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
+    function scale_down (word_size: natural;
+    factor: natural)
+    return natural;
+
+    function split_literal (word_size: natural;
+    input_word: std_logic_vector;
+    factor: natural;
+    index: natural)
+    return std_logic_vector;
+
     function parse_word_type (word_size: natural;
     input_word: std_logic_vector)
     return Word;
@@ -60,9 +70,44 @@ package utils is
     function decode_single (word_size: natural;
     input_block: std_logic_vector)
     return std_logic_vector;
+
+    function log2ceil (n : natural)
+    return natural;
 end;
 
 package body utils is
+
+    --
+    -- determines the new word size when blocks are splitted into facor parts
+    --
+    function scale_down (word_size: natural;
+    factor: natural)
+    return natural is
+    begin
+        return ((word_size - 1) / factor) + 1;
+    end scale_down;
+
+    --
+    -- splits the literal word into factor parts and returns the part no index
+    --
+    function split_literal (word_size: natural;
+    input_word: std_logic_vector;
+    factor: natural;
+    index: natural)
+    return std_logic_vector is
+        variable result: std_logic_vector(scale_down(word_size, factor)-1 downto 0);
+        variable upper_bound: natural;
+        variable lower_bound: natural;
+    begin
+        lower_bound := (word_size-1) / factor * index;
+        upper_bound := (word_size-1) / factor * (index + 1);
+
+        result(scale_down(word_size, factor)-1) := '0';
+        result(scale_down(word_size, factor)-2 downto 0) := input_word(upper_bound-1 downto lower_bound);
+
+        return result;
+    end split_literal;
+
     --
     -- determine the word type of input_word by parsing the control bits
     -- (MSB for literals and MSB, MSB-1 for fills)
@@ -289,5 +334,25 @@ package body utils is
         end case;
         return decoded_block;
     end decode_single;
+
+    --
+    -- calculates log2 ceiling for values up to 32
+    -- source: https://www.mikrocontroller.net/topic/61054
+    --
+    function log2ceil (n : natural)
+    return natural is
+        variable n_bit : unsigned(5 downto 0);
+    begin  -- log2ceil
+        if n = 0 then
+            return 0;
+        end if;
+        n_bit := to_unsigned(n-1,6);
+        for i in 5 downto 0 loop
+            if n_bit(i) = '1' then
+                return i+1;
+            end if;
+        end loop;
+        return 1;
+    end log2ceil;
 
 end package body;
