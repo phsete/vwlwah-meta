@@ -51,12 +51,9 @@ architecture implementation of FIFO2AXIS_v1_0_M00_AXIS is
 
     signal tx_en	: std_logic;
 
-    -- fist buffer
-    signal valid_buf_0: boolean := false;
-    signal buf_0: std_logic_vector(C_M_AXIS_TDATA_WIDTH-1 downto 0);
-    -- second buffer
-    signal valid_buf_1: boolean := false;
-    signal buf_1: std_logic_vector(C_M_AXIS_TDATA_WIDTH-1 downto 0);
+    -- buffer
+    signal valid_buf: boolean := false;
+    signal buf: std_logic_vector(C_M_AXIS_TDATA_WIDTH-1 downto 0);
 
 begin
     -- Control state machine implementation
@@ -95,7 +92,7 @@ begin
     M_AXIS_TSTRB	<= (others => '1');
 
     --axis_tvalid is asserted when the control state machine's state is SEND_STREAM and output data is available
-    axis_tvalid <= '1' when ((mst_exec_state = SEND_STREAM) and valid_buf_1) else '0';
+    axis_tvalid <= '1' when ((mst_exec_state = SEND_STREAM) and valid_buf) else '0';
 
     -- Delay the outputEmpty, tx_en, axis_tvalid and axis_tlast signal by one clock cycle
     -- to match the latency of M_AXIS_TDATA
@@ -120,7 +117,7 @@ begin
                 outputRden_delay <= outputRden;
 
                 M_AXIS_TVALID	<= axis_tvalid;
-                M_AXIS_TLAST <= axis_tlast_delay;
+                M_AXIS_TLAST <= axis_tlast;
             end if;
         end if;
     end process;
@@ -135,19 +132,16 @@ begin
             if (M_AXIS_ARESETN = '0') then
                 outputRden <= '0';
                 stream_data_out <= std_logic_vector(to_unsigned(sig_one,C_M_AXIS_TDATA_WIDTH));
-                valid_buf_0 <= false;
-                valid_buf_1 <= false;
+                valid_buf <= false;
             else
                 if (M_AXIS_TREADY = '1') then
                     -- obtain data
                     if (outputRden_delay = '1' or outputFinal = '1') then
-                        buf_0 <= outputData;
-                        valid_buf_0 <= outputEmpty_delay = '0';
+                        buf <= outputData;
+                        valid_buf <= outputEmpty_delay = '0';
                     end if;
 
-                    stream_data_out <= buf_1;
-                    buf_1 <= buf_0;
-                    valid_buf_1 <= valid_buf_0;
+                    stream_data_out <= buf;
 
                     -- set next read state
                     if (M_AXIS_TREADY = '1' and outputEmpty = '0') then
