@@ -9,10 +9,22 @@ package utils is
     factor: natural)
     return natural;
 
+    function scale_up (word_size: natural;
+    factor: natural)
+    return natural;
+
     function split_literal (word_size: natural;
     input_word: std_logic_vector;
     factor: natural;
     index: natural)
+    return std_logic_vector;
+
+    function extend_literal (word_size: natural;
+    old_literal: std_logic_vector;
+    new_word_size: natural;
+    new_block: std_logic_vector;
+    from_index: natural;
+    to_index: natural)
     return std_logic_vector;
 
     function parse_word_type (word_size: natural;
@@ -88,6 +100,16 @@ package body utils is
     end scale_down;
 
     --
+    -- determines the new word size when factor blocks are combined into one
+    --
+    function scale_up (word_size: natural;
+    factor: natural)
+    return natural is
+    begin
+        return ((word_size - 1) * factor) + 1;
+    end scale_up;
+
+    --
     -- splits the literal word into factor parts and returns the part no index
     --
     function split_literal (word_size: natural;
@@ -107,6 +129,24 @@ package body utils is
 
         return result;
     end split_literal;
+
+    --
+    -- extends the old literal by adding the new block at bit positions
+    -- (block_size * (from_index+1)-1 downto block_size * to_index
+    --
+    function extend_literal (word_size: natural;
+    old_literal: std_logic_vector;
+    new_word_size: natural;
+    new_block: std_logic_vector;
+    from_index: natural;
+    to_index: natural)
+    return std_logic_vector is
+        variable new_literal: std_logic_vector(new_word_size-1 downto 0);
+    begin
+        new_literal := old_literal;
+        new_literal((word_size-1) * (from_index+1) - 1 downto (word_size-1) * to_index) := new_block;
+        return new_literal;
+    end extend_literal;
 
     --
     -- determine the word type of input_word by parsing the control bits

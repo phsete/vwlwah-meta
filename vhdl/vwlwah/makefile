@@ -16,10 +16,11 @@ MODULES=\
 	  AXIS2FIFO_v1_0_S00_AXIS \
 	  FIFO2AXIS_v1_0 \
 	  FIFO2AXIS_v1_0_M00_AXIS \
-	  sizedown
+	  sizedown \
+	  sizeup
 
 TESTBENCH=\
-	  sizedown_4_tb
+	  sizeup_2_tb
 
 GHDL_CMD=ghdl
 
