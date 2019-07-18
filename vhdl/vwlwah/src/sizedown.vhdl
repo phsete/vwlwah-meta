@@ -284,7 +284,7 @@ begin
 
         check_reset;
 
-        FINAL_OUT <= '1' when (final_delay and output_words_left = 0 and input_fill_length = 0) else '0';
+        FINAL_OUT <= '1' when (current_type = W_NONE and final_delay and output_words_left = 0 and input_fill_length = 0) else '0';
         OUT_WR <= out_wr_loc;
 
     end process;

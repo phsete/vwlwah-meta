@@ -4,10 +4,10 @@ use ieee.numeric_std.all;
 use work.utils.all;
 
 --  A testbench has no ports.
-entity sizedown_tb is
-    end sizedown_tb;
+entity sizedown_2_tb is
+    end sizedown_2_tb;
 
-architecture behav of sizedown_tb is
+architecture behav of sizedown_2_tb is
 
     -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
     function to_string ( a: std_logic_vector) return string is

@@ -19,7 +19,7 @@ MODULES=\
 	  sizedown
 
 TESTBENCH=\
-	  sizedown_tb
+	  sizedown_4_tb
 
 GHDL_CMD=ghdl
 
