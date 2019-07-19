@@ -33,7 +33,6 @@ architecture IMP of sizeup is
     signal output_buffer:       std_logic_vector(output_word_size-1 downto 0) := (others => 'U');
     signal running:             std_logic := '1';
     signal final:               boolean := false;
-    signal final_delay:         boolean := false;
     signal current_type:        Word := W_NONE;
     signal last_type:           Word := W_NONE;
     signal output_type:         Word := W_NONE;
@@ -42,10 +41,10 @@ architecture IMP of sizeup is
 
     signal output_words_left:   integer := 0;
     signal current_word_handled:boolean := true;
-    signal literal_buffer:      std_logic_vector(output_word_size-1 downto 0) := (others => 'U');
+    signal literal_buffer:      std_logic_vector(output_word_size-1 downto 0) := (others => '0');
     -- points to the next free sub-block of the literal buffer
     -- counting from scaling_factor-1 downto 0
-    signal literal_buffer_pos:  unsigned(log2ceil(scaling_factor)-2 downto 0) := (others => '1');
+    signal literal_buffer_pos:  unsigned(log2ceil(scaling_factor)-1 downto 0) := (others => '1');
     signal free_buffer_space:   natural := scaling_factor;
 
     -- indicates a full literal buffer which cannot be printed immediately
@@ -72,13 +71,12 @@ begin
                 output_fill_length      <= (others => '0');
                 current_word            <= (others => 'U');
                 output_buffer           <= (others => 'U');
-                literal_buffer          <= (others => 'U');
+                literal_buffer          <= (others => '0');
                 running                 <= '1';
                 current_type            <= W_NONE;
                 last_type               <= W_NONE;
                 output_type             <= W_NONE;
                 final                   <= false;
-                final_delay             <= false;
                 output_words_left       <= 0;
                 current_word_handled    <= true;
                 literal_buffer_pos      <= (others => '1');
@@ -137,12 +135,12 @@ begin
 
                     -- fill remaining literal
                     literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(output_fill_remainder));
-                    literal_buffer_pos <= to_unsigned(scaling_factor - output_fill_remainder - 1, log2ceil(scaling_factor)-1);
+                    literal_buffer_pos <= to_unsigned(scaling_factor - output_fill_remainder - 1, log2ceil(scaling_factor));
                 end if;
             else -- the buffer doesn't have contents
                  -- calculate output fill length
-                output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
-                output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
+                output_fill_length_var := input_fill_length / scaling_factor;
+                output_fill_remainder := to_integer(input_fill_length) mod scaling_factor;
                 output_fill_length <= output_fill_length_var;
                 output_words_left_var := fill_words_needed(output_word_size, fill_counter_size, output_fill_length_var);
 
@@ -168,7 +166,7 @@ begin
 
         procedure FILL_to_LITERAL (fill_type: std_logic) is
                                    variable literal_buffer_var:      std_logic_vector(output_word_size-1 downto 0) := (others => 'U');
-                                   variable literal_buffer_pos_var:  unsigned(log2ceil(scaling_factor)-2 downto 0) := (others => '1');
+                                   variable literal_buffer_pos_var:  unsigned(log2ceil(scaling_factor)-1 downto 0) := (others => '1');
         begin
             if (free_buffer_space < scaling_factor) then
                 -- the buffer has contents
@@ -229,8 +227,8 @@ begin
                 end if;
             else -- the buffer doesn't have contents
                  -- calculate output fill length
-                output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
-                output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
+                output_fill_length_var := input_fill_length / scaling_factor;
+                output_fill_remainder := to_integer(input_fill_length) mod scaling_factor;
                 output_fill_length <= output_fill_length_var;
                 output_words_left_var := fill_words_needed(output_word_size, fill_counter_size, output_fill_length_var);
 
@@ -258,7 +256,7 @@ begin
                 else
                     -- remaining blocks fit into the buffer and the literal fills it
                     literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
-                    literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
+                    literal_buffer_pos_var := literal_buffer_pos_var - to_integer(input_fill_length);
                     literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
                     literal_buffer_pos <= literal_buffer_pos_var - 1;
                     pending_literal <= true;
@@ -303,8 +301,10 @@ begin
                                 start_new_fill(current_word);
                             when W_LITERAL =>
                                 FILL_to_LITERAL('0');
+                                input_fill_length <= (others => '0');
                             when others =>
                                 FILL_to_NONE('0');
+                                input_fill_length <= (others => '0');
                         end case;
                     when W_1FILL =>
                         case current_type is
@@ -316,8 +316,10 @@ begin
                                 out_wr_loc <= '0';
                             when W_LITERAL =>
                                 FILL_to_LITERAL('1');
+                                input_fill_length <= (others => '0');
                             when others =>
                                 FILL_to_NONE('1');
+                                input_fill_length <= (others => '0');
                         end case;
                     when W_LITERAL =>
                         case current_type is
@@ -376,7 +378,6 @@ begin
             end if;
 
             if (FINAL_IN = '1') then
-                final_delay <= final;
                 final <= true;
             end if;
         end if;
@@ -390,7 +391,7 @@ begin
                 current_word <= BLK_IN;
                 current_type <= parse_word_type(word_size, BLK_IN);
                 current_word_handled <= false;
-            elsif (final_delay and current_word_handled) then
+            elsif (final and current_word_handled) then
                 -- don't process any further
                 current_word <= (others => 'U');
                 current_type <= W_NONE;
@@ -403,7 +404,7 @@ begin
                 in_rd_loc    <= '0';
             elsif (output_words_left > 1) then
                 in_rd_loc    <= '0';
-            elsif (final_delay) then
+            elsif (final) then
                 -- finally done
                 in_rd_loc    <= '0';
             elsif (in_rd_loc = '1') then
@@ -427,10 +428,10 @@ begin
 
         check_reset;
 
-        FINAL_OUT <= '1' when (current_type = W_NONE and final_delay and output_words_left = 0 and input_fill_length = 0) else '0';
         OUT_WR <= out_wr_loc;
 
     end process;
 
+    FINAL_OUT <= '1' when (current_type = W_NONE and final and output_words_left = 0 and input_fill_length = 0 and not pending_literal) else '0';
     IN_RD  <= in_rd_loc;
 end IMP;
