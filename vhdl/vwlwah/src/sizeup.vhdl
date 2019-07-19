@@ -5,23 +5,23 @@ use work.utils.all;
 
 entity sizeup is
     Generic (
-        word_size:              natural := 5;
-        scaling_factor:         natural := 2;
-        fill_counter_size:      natural := 32
-    );
+                word_size:              natural := 5;
+                scaling_factor:         natural := 2;
+                fill_counter_size:      natural := 32
+            );
     port (
-        CLK:                in  std_logic;
-        RESET:              in  std_logic;
-        IN_EMPTY:           in  std_logic;
-        FINAL_IN:           in  std_logic;
-        BLK_IN:             in  std_logic_vector(word_size-1 downto 0);
-        OUT_FULL:           in  std_logic;
-        OUT_WR:             out std_logic;
-        BLK_OUT:            out std_logic_vector(scale_up(word_size, scaling_factor)-1 downto 0);
-        IN_RD:              out std_logic;
-        FINAL_OUT:          out std_logiC
-    );
-    constant output_word_size: natural := scale_up(word_size, scaling_factor);
+             CLK:                in  std_logic;
+             RESET:              in  std_logic;
+             IN_EMPTY:           in  std_logic;
+             FINAL_IN:           in  std_logic;
+             BLK_IN:             in  std_logic_vector(word_size-1 downto 0);
+             OUT_FULL:           in  std_logic;
+             OUT_WR:             out std_logic;
+             BLK_OUT:            out std_logic_vector(scale_up(word_size, scaling_factor)-1 downto 0);
+             IN_RD:              out std_logic;
+             FINAL_OUT:          out std_logiC
+         );
+         constant output_word_size: natural := scale_up(word_size, scaling_factor);
 end sizeup;
 
 architecture IMP of sizeup is
@@ -45,7 +45,7 @@ architecture IMP of sizeup is
     signal literal_buffer:      std_logic_vector(output_word_size-1 downto 0) := (others => 'U');
     -- points to the next free sub-block of the literal buffer
     -- counting from scaling_factor-1 downto 0
-    signal literal_buffer_pos:  unsigned(log2ceil(scaling_factor)-1 downto 0) := (others => '1');
+    signal literal_buffer_pos:  unsigned(log2ceil(scaling_factor)-2 downto 0) := (others => '1');
     signal free_buffer_space:   natural := scaling_factor;
 
     -- indicates a full literal buffer which cannot be printed immediately
@@ -101,32 +101,185 @@ begin
                                  input_fill_length,
                                  input_word);
         end procedure;
-        
-        procedure extend_literal_loc (allow_output: boolean;
-                                      input_block: std_logic_vector(word_size-2 downto 0);
-                                      num_extensions: natural) is
-            variable result: std_logic_vector(output_word_size-1 downto 0);
+
+        procedure FILL_to_NONE (fill_type: std_logic) is
         begin
-            if num_extensions /= 0 then
-                result := extend_literal(word_size,
-                literal_buffer,
-                output_word_size,
-                input_block,
-                to_integer(literal_buffer_pos),
-                to_integer(literal_buffer_pos)-num_extensions+1);
-                literal_buffer_pos <= literal_buffer_pos - num_extensions; -- TODO cannot assign twice in one cycle
-                if (literal_buffer_pos = 0 and allow_output) then
-                -- a complete output word has been built
-                    output_buffer <= result;
+            if (free_buffer_space < scaling_factor) then
+                -- the buffer has contents
+                if (input_fill_length < free_buffer_space) then
+                    -- the fill fits into the buffer without filling it
+                    literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
+                    literal_buffer_pos <= literal_buffer_pos - input_fill_length;
+                    out_wr_loc <= '0';
+                elsif (input_fill_length = free_buffer_space) then
+                    -- the fill uses all the remaining buffer space
+                    output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(free_buffer_space));
+                    literal_buffer_pos <= (others => '1');
+                    out_wr_loc <= '1';
                 else
-                    literal_buffer <= result;
-                    pending_literal <= not allow_output;
+                    -- the fill uses more than the remaining buffer space
+                    output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(free_buffer_space));
+                    -- literal_buffer_pos is set afterwards
+                    out_wr_loc <= '1';
+
+                    -- calculate output fill length
+                    output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
+                    output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
+                    output_fill_length <= output_fill_length_var;
+                    output_words_left <= fill_words_needed(output_word_size,
+                                         fill_counter_size,
+                                         output_fill_length_var);
+                    if (fill_type = '0') then
+                        output_type <= W_0FILL;
+                    else
+                        output_type <= W_1FILL;
+                    end if;
+
+                    -- fill remaining literal
+                    literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(output_fill_remainder));
+                    literal_buffer_pos <= to_unsigned(scaling_factor - output_fill_remainder - 1, log2ceil(scaling_factor)-1);
+                end if;
+            else -- the buffer doesn't have contents
+                 -- calculate output fill length
+                output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
+                output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
+                output_fill_length <= output_fill_length_var;
+                output_words_left_var := fill_words_needed(output_word_size, fill_counter_size, output_fill_length_var);
+
+                if (output_words_left_var > 0) then
+                    -- output first fill word
+                    output_buffer <= encode_fill(output_word_size, fill_counter_size, fill_type, output_fill_length_var, output_words_left_var-1);
+                    out_wr_loc <= '1';
+                    output_words_left <= output_words_left_var-1;
+                    if (fill_type = '0') then
+                        output_type <= W_0FILL;
+                    else
+                        output_type <= W_1FILL;
+                    end if;
+                else
+                    out_wr_loc <= '0';
+                end if;
+
+                -- fill remaining literal
+                literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(output_fill_remainder));
+                literal_buffer_pos <= literal_buffer_pos - output_fill_remainder;
+            end if;
+        end procedure;
+
+        procedure FILL_to_LITERAL (fill_type: std_logic) is
+                                   variable literal_buffer_var:      std_logic_vector(output_word_size-1 downto 0) := (others => 'U');
+                                   variable literal_buffer_pos_var:  unsigned(log2ceil(scaling_factor)-2 downto 0) := (others => '1');
+        begin
+            if (free_buffer_space < scaling_factor) then
+                -- the buffer has contents
+                if (input_fill_length + 1 < free_buffer_space) then
+                    -- the fill and the literal fit into the buffer without filling it
+                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
+                    literal_buffer_pos_var := literal_buffer_pos - input_fill_length;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos <= literal_buffer_pos_var - 1;
+                    out_wr_loc <= '0';
+                elsif (input_fill_length + 1 = free_buffer_space) then
+                    -- the fill fits into the buffer and the literal fills it
+                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
+                    literal_buffer_pos_var := literal_buffer_pos - input_fill_length;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos <= literal_buffer_pos_var - 1;
+                    out_wr_loc <= '1';
+                elsif (input_fill_length = free_buffer_space) then
+                    -- the fill fills the remaining buffer space and the literal starts a new buffer
+                    output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
+                    literal_buffer_pos_var := literal_buffer_pos - input_fill_length;
+                    literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos <= literal_buffer_pos_var - 1;
+                    out_wr_loc <= '1';
+                else
+                    -- the fill uses more than the remaining buffer space
+                    output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(free_buffer_space));
+                    literal_buffer_pos_var := (others => '1');
+                    out_wr_loc <= '1';
+
+                    -- calculate output fill length
+                    output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
+                    output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
+                    output_fill_length <= output_fill_length_var;
+                    output_words_left <= fill_words_needed(output_word_size,
+                                         fill_counter_size,
+                                         output_fill_length_var);
+                    if (fill_type = '0') then
+                        output_type <= W_0FILL;
+                    else
+                        output_type <= W_1FILL;
+                    end if;
+
+                    if (output_fill_remainder + 1 < scaling_factor) then
+                        -- remaining blocks and literal fit into buffer without filling it
+                        literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                        literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
+                        literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                        literal_buffer_pos <= literal_buffer_pos_var - 1;
+                    else
+                        -- remaining blocks fit into the buffer and the literal fills it
+                        literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                        literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
+                        literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                        literal_buffer_pos <= literal_buffer_pos_var - 1;
+                        pending_literal <= true;
+                    end if;
+                end if;
+            else -- the buffer doesn't have contents
+                 -- calculate output fill length
+                output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
+                output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
+                output_fill_length <= output_fill_length_var;
+                output_words_left_var := fill_words_needed(output_word_size, fill_counter_size, output_fill_length_var);
+
+                if (output_words_left_var > 0) then
+                    -- output first fill word
+                    output_buffer <= encode_fill(output_word_size, fill_counter_size, fill_type, output_fill_length_var, output_words_left_var-1);
+                    out_wr_loc <= '1';
+                    output_words_left <= output_words_left_var-1;
+                    if (fill_type = '0') then
+                        output_type <= W_0FILL;
+                    else
+                        output_type <= W_1FILL;
+                    end if;
+                else
+                    out_wr_loc <= '0';
+                end if;
+
+                literal_buffer_pos_var := (others => '1');
+                if (output_fill_remainder + 1 < scaling_factor) then
+                    -- remaining blocks and literal fit into buffer without filling it
+                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
+                    literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos <= literal_buffer_pos_var - 1;
+                else
+                    -- remaining blocks fit into the buffer and the literal fills it
+                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
+                    literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos <= literal_buffer_pos_var - 1;
+                    pending_literal <= true;
                 end if;
             end if;
         end procedure;
 
-    begin
+        procedure LITERAL_to_LITERAL is
+        begin
+            if (literal_buffer_pos = 0) then
+                output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos), 1);
+                out_wr_loc <= '1';
+            else
+                literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos), 1);
+                out_wr_loc <= '0';
+            end if;
 
+            literal_buffer_pos <= literal_buffer_pos-1;
+        end procedure;
+
+    begin
         free_buffer_space <= to_integer(literal_buffer_pos) + 1;
 
         --
@@ -139,70 +292,32 @@ begin
                 last_word    <= current_word;
                 last_type    <= current_type;
 
-                case current_type is
+                case last_type is
                     when W_0FILL =>
                         case current_type is
                             when W_0FILL =>
                                 extend_fill(current_word);
                                 out_wr_loc <= '0';
                             when W_1FILL =>
-                                -- TODO
+                                FILL_to_NONE('0');
+                                start_new_fill(current_word);
                             when W_LITERAL =>
-                                -- TODO
+                                FILL_to_LITERAL('0');
                             when others =>
-                                if (free_buffer_space < 4) then
-                                    if (input_fill_length < free_buffer_space) then
-                                        extend_literal_loc(false, decode_fill(word_size, '0'), to_integer(input_fill_length));
-                                        out_wr_loc <= '0';
-                                    elsif (input_fill_length = free_buffer_space) then
-                                        extend_literal_loc(false, decode_fill(word_size, '0'), integer(free_buffer_space));
-                                        out_wr_loc <= '1';
-                                    else
-                                        extend_literal_loc(true, decode_fill(word_size, '0'), integer(free_buffer_space));
-                                        out_wr_loc <= '1';
-
-                                        -- calculate output fill length
-                                        output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
-                                        output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
-                                        input_fill_length <= (others => '0');
-                                        output_fill_length <= output_fill_length_var;
-                                        output_words_left <= fill_words_needed(output_word_size,
-                                            fill_counter_size,
-                                            output_fill_length_var);
-                                        output_type <= current_type;
-
-                                        -- fill remaining literal
-                                        extend_literal_loc(false, decode_fill(word_size, '0'), integer(output_fill_remainder)); -- TODO: cannot assign twice in one cycle
-                                    end if;
-                                else
-                                    -- calculate output fill length
-                                    output_fill_length_var := (input_fill_length - free_buffer_space) / scaling_factor;
-                                    output_fill_remainder := to_integer((input_fill_length - free_buffer_space)) mod scaling_factor;
-                                    input_fill_length <= (others => '0');
-                                    output_fill_length <= output_fill_length_var;
-                                    output_words_left_var := fill_words_needed(output_word_size, fill_counter_size, output_fill_length_var);
-
-                                    -- output first fill word
-                                    output_buffer <= encode_fill(output_word_size, fill_counter_size, '0', output_fill_length_var, output_words_left_var-1);
-                                    out_wr_loc <= '1';
-                                    output_words_left <= output_words_left_var-1;
-                                    output_type <= current_type;
-
-                                    -- fill remaining literal
-                                    extend_literal_loc(false, decode_fill(word_size, '0'), integer(output_fill_remainder));
-                                end if;
+                                FILL_to_NONE('0');
                         end case;
                     when W_1FILL =>
                         case current_type is
                             when W_0FILL =>
-                                -- TODO
+                                FILL_to_NONE('1');
+                                start_new_fill(current_word);
                             when W_1FILL =>
                                 extend_fill(current_word);
                                 out_wr_loc <= '0';
                             when W_LITERAL =>
-                                -- TODO
+                                FILL_to_LITERAL('1');
                             when others =>
-                                -- TODO
+                                FILL_to_NONE('1');
                         end case;
                     when W_LITERAL =>
                         case current_type is
@@ -213,8 +328,7 @@ begin
                                 start_new_fill(current_word);
                                 out_wr_loc <= '0';
                             when W_LITERAL =>
-                                extend_literal_loc(true, decode_literal(word_size, current_word), 1);
-                                out_wr_loc <= to_std_logic(literal_buffer_pos = 0);
+                                LITERAL_to_LITERAL;
                             when others =>
                                 out_wr_loc <= '0';
                         end case;
@@ -227,8 +341,7 @@ begin
                                 start_new_fill(current_word);
                                 out_wr_loc <= '0';
                             when W_LITERAL =>
-                                extend_literal_loc(true, decode_literal(word_size, current_word), 1);
-                                out_wr_loc <= to_std_logic(literal_buffer_pos = 0);
+                                LITERAL_to_LITERAL;
                             when others =>
                                 out_wr_loc <= '0';
                         end case;

@@ -24,7 +24,7 @@ package utils is
     new_word_size: natural;
     new_block: std_logic_vector;
     from_index: natural;
-    to_index: natural)
+    num_extensions: natural)
     return std_logic_vector;
 
     function parse_word_type (word_size: natural;
@@ -139,12 +139,14 @@ package body utils is
     new_word_size: natural;
     new_block: std_logic_vector;
     from_index: natural;
-    to_index: natural)
+    num_extensions: natural)
     return std_logic_vector is
         variable new_literal: std_logic_vector(new_word_size-1 downto 0);
     begin
         new_literal := old_literal;
-        new_literal((word_size-1) * (from_index+1) - 1 downto (word_size-1) * to_index) := new_block;
+        if (num_extensions > 0) then
+            new_literal((word_size-1) * (from_index+1) - 1 downto (word_size-1) * from_index-num_extensions+1) := new_block;
+        end if;
         return new_literal;
     end extend_literal;
 
