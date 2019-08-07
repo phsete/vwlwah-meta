@@ -123,7 +123,7 @@ begin
             variable minimum_length: unsigned(fill_counter_size-1 downto 0) := (others => '1');
         begin
             for input_idx in 0 to num_inputs-1 loop
-                if input_length(input_idx) < minimum_length then
+                if input_length(input_idx) - consumed_length(input_idx) < minimum_length then
                     minimum_length := input_length(input_idx) - consumed_length(input_idx);
                 end if;
             end loop;
@@ -244,14 +244,11 @@ begin
 
                     input_length(input_idx) <= new_fill_length;
 
-                    -- TODO: documentation
-                    if ((current_type(input_idx) = next_type(input_idx)) or (current_type(input_idx) = W_NONE)) then
-                        if ((consumed_length(input_idx) = new_fill_length) or (parse_word_type(word_size, new_read_word) = next_type(input_idx))) then
-                            -- if all output is done, continue reading to see whether or not the fill needs to be extended
-                            in_rd_loc(input_idx) <= '1';
-                        else
-                            in_rd_loc(input_idx) <= '0';
-                        end if;
+                    if ((consumed_length(input_idx) = new_fill_length) or (parse_word_type(word_size, new_read_word) = next_type(input_idx))) then
+                        -- if all output is done, continue reading to see whether or not the fill needs to be extended
+                        in_rd_loc(input_idx) <= '1';
+                    else
+                        in_rd_loc(input_idx) <= '0';
                     end if;
                 elsif next_type(input_idx) = W_LITERAL then
                         -- prepare to handle a literal word
