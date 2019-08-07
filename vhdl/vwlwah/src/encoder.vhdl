@@ -83,11 +83,11 @@ begin
                 -- reset counters and buffer type to read next word
                 buffer_type <= W_NONE;
                 zero_fill_length <= to_unsigned(0, fill_counter_size);
-                fill_words_left <= 0;
+                -- fill_words_left <= 0;
 
                 -- output done, finally start new one fill
                 one_fill_length <= one_fill_length + 1;
-                fill_words_left <= fill_words_needed(word_size, fill_counter_size, one_fill_length);
+                fill_words_left <= fill_words_needed(word_size, fill_counter_size, one_fill_length + 1);
             end if;
         end procedure;
 
@@ -97,7 +97,7 @@ begin
         procedure handle_1F_0F is
         begin
             -- prepare output of 1 fill
-            output_buffer <= encode_fill(word_size, fill_counter_size, '1', zero_fill_length, fill_words_left - 1);
+            output_buffer <= encode_fill(word_size, fill_counter_size, '1', one_fill_length, fill_words_left - 1);
 
             if (fill_words_left > 1) then
                 -- the fill continues
@@ -107,11 +107,11 @@ begin
                 -- reset counters and buffer type to read next word
                 buffer_type <= W_NONE;
                 one_fill_length <= to_unsigned(0, fill_counter_size);
-                fill_words_left <= 0;
+                -- fill_words_left <= 0;
 
                 -- output done, finally start new zero fill
                 zero_fill_length <= zero_fill_length + 1;
-                fill_words_left <= fill_words_needed(word_size, fill_counter_size, zero_fill_length);
+                fill_words_left <= fill_words_needed(word_size, fill_counter_size, zero_fill_length + 1);
             end if;
         end procedure;
 

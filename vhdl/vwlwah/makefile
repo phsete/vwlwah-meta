@@ -20,7 +20,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  sizeup_2_tb
+	  encoder_tb
 
 GHDL_CMD=ghdl
 
