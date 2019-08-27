@@ -27,7 +27,7 @@ architecture IMP of FIFO_B32 is
 
     signal wrcnt : unsigned (addr_width-1 downto 0) := (others => '0');
     signal rdcnt : unsigned (addr_width-1 downto 0) := (others => '0');
-    signal wrpos : unsigned (4 downto 0) := (others => '1'); -- next free bit index
+    signal wrpos : unsigned (4 downto 0) := (others => '1'); -- next free bit index (=31)
     signal final: boolean := false;
     signal final_idx : unsigned(addr_width-1 downto 0) := (others => '0');
     type speicher is array(0 to (2**addr_width)-1) of unsigned(31 downto 0);
@@ -65,21 +65,48 @@ begin
         procedure write_next (data_in: std_logic_vector(word_size-1 downto 0)) is
             variable word1: std_logic_vector(31 downto 0);
             variable word2: std_logic_vector(31 downto 0);
+            variable new_word1_mask: std_logic_vector(31 downto 0) := (others => '0');
+            variable new_word2_mask: std_logic_vector(31 downto 0) := (others => '0');
+            variable new_word1: std_logic_vector(31 downto 0) := (others => '0');
+            variable new_word2: std_logic_vector(31 downto 0) := (others => '0');
             variable bits_in_word1: natural;
             variable bits_in_word2: natural;
         begin
+            -- read values from memory
             word1 := std_logic_vector(memory(to_integer(wrcnt)));
             word2 := std_logic_vector(memory(to_integer(wrcnt+1)));
-            if (to_integer(wrpos) > word_size-1) then -- enough bits left in word1
-                memory(to_integer(wrcnt))(to_integer(wrpos) downto to_integer(wrpos)-word_size+1) <= unsigned(data_in);
-            elsif (to_integer(wrpos) = word_size-1) then
-                memory(to_integer(wrcnt))(to_integer(wrpos) downto 0) <= unsigned(data_in);
-                wrcnt <= wrcnt+1;
+            -- right align input data in new_word1
+            new_word1(word_size-1 downto 0) := data_in;
+            new_word1_mask(word_size-1 downto 0) := (others => '1');
+            -- left align input data in new_word2
+            new_word2(31 downto 32 - word_size) := data_in;
+            new_word2_mask(31 downto 32 - word_size) := (others => '1');
+            if (to_integer(wrpos) >= word_size-1) then -- enough bits left in word1
+                new_word1 := std_logic_vector(shift_left(unsigned(new_word1), to_integer(wrpos) + 1 - word_size));
+                new_word1_mask := std_logic_vector(shift_left(unsigned(new_word1_mask), to_integer(wrpos) + 1 - word_size));
+                word1 := word1 AND NOT(new_word1_mask); -- set relevant bits to 0 in order to overwrite them
+                word1 := word1 OR new_word1;
+                memory(to_integer(wrcnt)) <= unsigned(word1);
+
+                if (to_integer(wrpos) = word_size-1) then -- exactly enough bits left in word1
+                    wrcnt <= wrcnt+1;
+                end if;
             else
                 bits_in_word1 := to_integer(wrpos) + 1;
                 bits_in_word2 := word_size - bits_in_word1;
-                memory(to_integer(wrcnt))(bits_in_word1-1 downto 0) <= unsigned(data_in(word_size-1 downto word_size-bits_in_word1));
-                memory(to_integer(wrcnt+1))(31 downto 31-bits_in_word2+1) <= unsigned(data_in(bits_in_word2-1 downto 0));
+
+                new_word1 := std_logic_vector(shift_right(unsigned(new_word1), word_size - bits_in_word1));
+                new_word1_mask := std_logic_vector(shift_right(unsigned(new_word1_mask), word_size - bits_in_word1));
+                word1 := word1 AND NOT(new_word1_mask); -- set relevant bits to 0 in order to overwrite them
+                word1 := word1 OR new_word1;
+                memory(to_integer(wrcnt)) <= unsigned(word1);
+
+                new_word2 := std_logic_vector(shift_left(unsigned(new_word2), word_size - bits_in_word2));
+                new_word2_mask := std_logic_vector(shift_left(unsigned(new_word2_mask), word_size - bits_in_word2));
+                word2 := word2 AND NOT(new_word2_mask);
+                word2 := word2 OR new_word2;
+                memory(to_integer(wrcnt + 1)) <= unsigned(word2);
+
                 wrcnt <= wrcnt+1;
             end if;
             wrpos <= wrpos - word_size;
