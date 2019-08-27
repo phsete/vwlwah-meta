@@ -20,7 +20,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  logic_or_tb
+	  fifo_32b_tb
 
 GHDL_CMD=ghdl
 

@@ -58,15 +58,23 @@ begin
             word1 := std_logic_vector(memory(to_integer(rdcnt)));
             word2 := std_logic_vector(memory(to_integer(rdcnt+1)));
             if (to_integer(rdpos) > word_size-1) then -- enough bits left in word1
-                out_word := word1(to_integer(rdpos) downto to_integer(rdpos)-word_size+1);
-            elsif (to_integer(rdpos) = word_size-1) then
-                out_word := word1(to_integer(rdpos) downto 0);
-                rdcnt <= rdcnt+1;
+                word1 := std_logic_vector(shift_right(unsigned(word1), to_integer(rdpos) + 1 - word_size));
+                out_word := word1(word_size-1 downto 0);
+                if (to_integer(rdpos) = word_size-1) then -- exactly enough bits left in word1
+                    rdcnt <= rdcnt+1;
+                end if;
             else
                 bits_in_word1 := to_integer(rdpos) + 1;
                 bits_in_word2 := word_size - bits_in_word1;
-                out_word(word_size-1 downto word_size-bits_in_word1) := word1(bits_in_word1-1 downto 0);
-                out_word(bits_in_word2-1 downto 0) := word2(31 downto 31-bits_in_word2+1);
+
+                -- ensure there's enough space for the bits of word2
+                word1 := std_logic_vector(shift_left(unsigned(word1), bits_in_word2));
+
+                -- pack the remaining bits into the free space of word1
+                word2 := std_logic_vector(shift_right(unsigned(word2), 32 - bits_in_word2));
+                word1 := word1 OR word2;
+
+                out_word(word_size-1 downto 0) := word1(word_size-1 downto 0);
                 rdcnt <= rdcnt+1;
             end if;
             rdpos <= rdpos - word_size;
