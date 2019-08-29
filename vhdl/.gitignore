@@ -2,8 +2,10 @@
 !/.gitignore
 !/makefile
 !/tb
+!/tb/data
 !/src
 !/src/axis
 !/tb/*.vhdl
+!/tb/data/*.txt
 !/src/*.vhdl
 !/src/axis/*.vhd

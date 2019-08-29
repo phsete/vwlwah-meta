@@ -20,7 +20,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  fifo_32b_tb
+	  fifo_bb_big
 
 GHDL_CMD=ghdl
 
