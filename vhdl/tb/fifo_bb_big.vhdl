@@ -99,6 +99,8 @@ architecture behav of fifo_bb_big is
             wait for 1 ns;
             outer_reset <= '1';
 
+            report "beginning tests";
+
             while not final_out loop
                 if (outer_full = '0') and (not endfile(input_buf)) then
                     -- read input
@@ -151,7 +153,7 @@ architecture behav of fifo_bb_big is
             report "output has fewer words than output file has lines" severity error;
 
             if endfile(output_buf) then
-                report "all tests succeeded";
+                report "all tests done";
             end if;
 
             file_close(input_buf);

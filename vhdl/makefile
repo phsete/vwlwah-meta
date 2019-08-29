@@ -8,10 +8,10 @@ MODULES=\
 	  fifo_bb \
 	  fifo_32b \
 	  fifo_b32 \
+	  inverter \
 	  encoder \
 	  decoder \
 	  logic_or \
-	  inverter \
 	  AXIS2FIFO_v1_0 \
 	  AXIS2FIFO_v1_0_S00_AXIS \
 	  FIFO2AXIS_v1_0 \
@@ -20,7 +20,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  fifo_bb_big
+	  fifo_b32_big
 
 GHDL_CMD=ghdl
 
