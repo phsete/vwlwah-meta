@@ -106,16 +106,22 @@ begin
                 -- the buffer has contents
                 if (input_fill_length < free_buffer_space) then
                     -- the fill fits into the buffer without filling it
+                    assert to_integer(input_fill_length) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 110)" severity note;
                     literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
                     literal_buffer_pos <= literal_buffer_pos - input_fill_length;
                     out_wr_loc <= '0';
                 elsif (input_fill_length = free_buffer_space) then
                     -- the fill uses all the remaining buffer space
+                    assert integer(free_buffer_space) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 117)" severity note;
                     output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(free_buffer_space));
                     literal_buffer_pos <= (others => '1');
                     out_wr_loc <= '1';
                 else
                     -- the fill uses more than the remaining buffer space
+                    assert integer(free_buffer_space) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 124)" severity note;
                     output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(free_buffer_space));
                     -- literal_buffer_pos is set afterwards
                     out_wr_loc <= '1';
@@ -134,7 +140,10 @@ begin
                     end if;
 
                     -- fill remaining literal
-                    literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(output_fill_remainder));
+                    assert integer(output_fill_remainder) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 144)" severity note;
+                    --                                                                                                              \------???------/
+                    literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), scaling_factor-1, integer(output_fill_remainder));
                     literal_buffer_pos <= to_unsigned(scaling_factor - output_fill_remainder - 1, log2ceil(scaling_factor));
                 end if;
             else -- the buffer doesn't have contents
@@ -159,6 +168,8 @@ begin
                 end if;
 
                 -- fill remaining literal
+                    assert integer(output_fill_remainder) < to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 172)" severity note;
                 literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(output_fill_remainder));
                 literal_buffer_pos <= literal_buffer_pos - output_fill_remainder;
             end if;
@@ -172,27 +183,44 @@ begin
                 -- the buffer has contents
                 if (input_fill_length + 1 < free_buffer_space) then
                     -- the fill and the literal fit into the buffer without filling it
+                    assert to_integer(input_fill_length) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 187)" severity note;
                     literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
-                    literal_buffer_pos_var := literal_buffer_pos - input_fill_length;
-                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos_var := to_unsigned(to_integer(literal_buffer_pos - input_fill_length), log2ceil(scaling_factor));
+
+                    assert 1 <= to_integer(literal_buffer_pos_var) + 1
+                    report "trying to push more blocks into a literal word than possible (error 192)" severity note;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                     literal_buffer_pos <= literal_buffer_pos_var - 1;
                     out_wr_loc <= '0';
                 elsif (input_fill_length + 1 = free_buffer_space) then
                     -- the fill fits into the buffer and the literal fills it
+                    assert to_integer(input_fill_length) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 199)" severity note;
                     literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
-                    literal_buffer_pos_var := literal_buffer_pos - input_fill_length;
-                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos_var := to_unsigned(to_integer(literal_buffer_pos - input_fill_length), log2ceil(scaling_factor));
+
+                    assert 1 <= to_integer(literal_buffer_pos_var) + 1
+                    report "trying to push more blocks into a literal word than possible (error 204)" severity note;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                     literal_buffer_pos <= literal_buffer_pos_var - 1;
                     out_wr_loc <= '1';
                 elsif (input_fill_length = free_buffer_space) then
                     -- the fill fills the remaining buffer space and the literal starts a new buffer
+                    assert to_integer(input_fill_length) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 211)" severity note;
                     output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
-                    literal_buffer_pos_var := literal_buffer_pos - input_fill_length;
-                    literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    literal_buffer_pos_var := (others => '1');
+
+                    assert 1 <= to_integer(literal_buffer_pos_var) + 1
+                    report "trying to push more blocks into a literal word than possible (error 216)" severity note;
+                    literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                     literal_buffer_pos <= literal_buffer_pos_var - 1;
                     out_wr_loc <= '1';
                 else
                     -- the fill uses more than the remaining buffer space
+                    assert integer(free_buffer_space) <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 223)" severity note;
                     output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), integer(free_buffer_space));
                     literal_buffer_pos_var := (others => '1');
                     out_wr_loc <= '1';
@@ -212,15 +240,25 @@ begin
 
                     if (output_fill_remainder + 1 < scaling_factor) then
                         -- remaining blocks and literal fit into buffer without filling it
-                        literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
-                        literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
-                        literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                        assert output_fill_remainder <= to_integer(literal_buffer_pos_var) + 1
+                        report "trying to push more blocks into a literal word than possible (error 244)" severity note;
+                        literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos_var), output_fill_remainder);
+                        literal_buffer_pos_var := to_unsigned(to_integer(literal_buffer_pos_var - output_fill_remainder), log2ceil(scaling_factor));
+
+                        assert 1 <= to_integer(literal_buffer_pos_var) + 1
+                        report "trying to push more blocks into a literal word than possible (error 249)" severity note;
+                        literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                         literal_buffer_pos <= literal_buffer_pos_var - 1;
                     else
                         -- remaining blocks fit into the buffer and the literal fills it
-                        literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
-                        literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
-                        literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                        assert output_fill_remainder <= to_integer(literal_buffer_pos_var) + 1
+                        report "trying to push more blocks into a literal word than possible (error 255)" severity note;
+                        literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos_var), output_fill_remainder);
+                        literal_buffer_pos_var := to_unsigned(to_integer(literal_buffer_pos_var - output_fill_remainder), log2ceil(scaling_factor));
+
+                        assert 1 <= to_integer(literal_buffer_pos_var) + 1
+                        report "trying to push more blocks into a literal word than possible (error 260)" severity note;
+                        literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                         literal_buffer_pos <= literal_buffer_pos_var - 1;
                         pending_literal <= true;
                     end if;
@@ -249,15 +287,25 @@ begin
                 literal_buffer_pos_var := (others => '1');
                 if (output_fill_remainder + 1 < scaling_factor) then
                     -- remaining blocks and literal fit into buffer without filling it
-                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
-                    literal_buffer_pos_var := literal_buffer_pos_var - input_fill_length;
-                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    assert output_fill_remainder <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 291)" severity note;
+                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), output_fill_remainder);
+                    literal_buffer_pos_var := to_unsigned(to_integer(literal_buffer_pos_var - output_fill_remainder), log2ceil(scaling_factor));
+
+                    assert 1 <= to_integer(literal_buffer_pos_var) + 1
+                    report "trying to push more blocks into a literal word than possible (error 296)" severity note;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                     literal_buffer_pos <= literal_buffer_pos_var - 1;
                 else
                     -- remaining blocks fit into the buffer and the literal fills it
-                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), to_integer(input_fill_length));
-                    literal_buffer_pos_var := literal_buffer_pos_var - to_integer(input_fill_length);
-                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), to_integer(input_fill_length));
+                    assert output_fill_remainder <= to_integer(literal_buffer_pos) + 1
+                    report "trying to push more blocks into a literal word than possible (error 302)" severity note;
+                    literal_buffer_var := extend_literal(word_size, literal_buffer, output_word_size, decode_fill(word_size, fill_type), to_integer(literal_buffer_pos), output_fill_remainder);
+                    literal_buffer_pos_var := to_unsigned(to_integer(literal_buffer_pos_var - output_fill_remainder), log2ceil(scaling_factor));
+
+                    assert 1 <= to_integer(literal_buffer_pos_var) + 1
+                    report "trying to push more blocks into a literal word than possible (error 307)" severity note;
+                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                     literal_buffer_pos <= literal_buffer_pos_var - 1;
                     pending_literal <= true;
                 end if;
@@ -267,9 +315,13 @@ begin
         procedure LITERAL_to_LITERAL is
         begin
             if (literal_buffer_pos = 0) then
+                assert 1 <= to_integer(literal_buffer_pos) + 1
+                report "trying to push more blocks into a literal word than possible (error 319)" severity note;
                 output_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos), 1);
                 out_wr_loc <= '1';
             else
+                assert 1 <= to_integer(literal_buffer_pos) + 1
+                report "trying to push more blocks into a literal word than possible (error 324)" severity note;
                 literal_buffer <= extend_literal(word_size, literal_buffer, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos), 1);
                 out_wr_loc <= '0';
             end if;

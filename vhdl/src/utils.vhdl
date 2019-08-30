@@ -131,8 +131,8 @@ package body utils is
     end split_literal;
 
     --
-    -- extends the old literal by adding the new block at bit positions
-    -- (block_size * (from_index+1)-1 downto block_size * to_index
+    -- extends the old literal by adding 'num_extensions' new blocks at block position from_index
+    -- ranging from scaling_factor-1 to 0
     --
     function extend_literal (word_size: natural;
     old_literal: std_logic_vector;
@@ -142,11 +142,15 @@ package body utils is
     num_extensions: natural)
     return std_logic_vector is
         variable new_literal: std_logic_vector(new_word_size-1 downto 0);
+        variable upper_bound: natural;
+        variable lower_bound: natural;
     begin
         new_literal := old_literal;
-        if (num_extensions > 0) then
-            new_literal((word_size-1) * (from_index+1) - 1 downto (word_size-1) * from_index-num_extensions+1) := new_block;
-        end if;
+        for extension in 0 to num_extensions-1 loop
+            upper_bound := ((word_size-1) * (from_index+1 - extension) - 1);
+            lower_bound := ((word_size-1) * (from_index - extension));
+            new_literal(upper_bound downto lower_bound) := new_block;
+        end loop;
         return new_literal;
     end extend_literal;
 
