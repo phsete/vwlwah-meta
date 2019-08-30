@@ -20,7 +20,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  fifo_b32_big
+	  encoder_big
 
 GHDL_CMD=ghdl
 

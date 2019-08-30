@@ -217,8 +217,24 @@ begin
             -- prepare output of 0 fill
             output_buffer <= encode_literal(word_size, content);
 
-            -- reset buffer type to read further
-            buffer_type <= W_NONE;
+            if (input_available = '1') then
+                case parse_block_type(word_size, input_buffer) is
+                    when W_0FILL =>
+                        fill_words_left <= fill_words_needed(word_size, fill_counter_size, zero_fill_length + 1);
+                        zero_fill_length <= zero_fill_length + 1;
+                        buffer_type <= W_NONE;
+                    when W_1FILL =>
+                        fill_words_left <= fill_words_needed(word_size, fill_counter_size, one_fill_length + 1);
+                        one_fill_length <= one_fill_length + 1;
+                        buffer_type <= W_NONE;
+                    when W_LITERAL =>
+                        literal_buffer <= input_buffer;
+                    when others =>
+                        buffer_type <= W_NONE;
+                end case;
+            else
+                buffer_type <= W_NONE;
+            end if;
 
             if (final) then
                 FINAL_OUT <= '1';
