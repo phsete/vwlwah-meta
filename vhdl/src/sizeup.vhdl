@@ -202,7 +202,7 @@ begin
 
                     assert 1 <= to_integer(literal_buffer_pos_var) + 1
                     report "trying to push more blocks into a literal word than possible (error 204)" severity note;
-                    literal_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
+                    output_buffer <= extend_literal(word_size, literal_buffer_var, output_word_size, decode_literal(word_size, current_word), to_integer(literal_buffer_pos_var), 1);
                     literal_buffer_pos <= literal_buffer_pos_var - 1;
                     out_wr_loc <= '1';
                 elsif (input_fill_length = free_buffer_space) then
