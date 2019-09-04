@@ -25,6 +25,7 @@ def main ():
             fill('0')
         else:
             fill('1')
+    finalize()
 
 def literal (content):
     global current_fill_length
