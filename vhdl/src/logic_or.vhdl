@@ -7,22 +7,22 @@ use work.utils.all;
 
 entity logic_or is
     Generic (
-        word_size:              natural := 5;
-        num_inputs:             natural := 2;
-        fill_counter_size:      natural := 32
-    );
+                word_size:              natural := 5;
+                num_inputs:             natural := 2;
+                fill_counter_size:      natural := 32
+            );
     port (
-        CLK:                in  std_logic;
-        RESET:              in  std_logic;
-        IN_EMPTY:           in  std_logic_vector(0 to num_inputs-1);
-        FINAL_IN:           in  std_logic_vector(0 to num_inputs-1);
-        BLK_IN:             in  std_logic_vector(num_inputs*word_size-1 downto 0);
-        OUT_FULL:           in  std_logic;
-        OUT_WR:             out std_logic;
-        BLK_OUT:            out std_logic_vector(word_size-1 downto 0);
-        IN_RD:              out std_logic_vector(0 to num_inputs-1);
-        FINAL_OUT:          out std_logic
-    );
+             CLK:                in  std_logic;
+             RESET:              in  std_logic;
+             IN_EMPTY:           in  std_logic_vector(0 to num_inputs-1);
+             FINAL_IN:           in  std_logic_vector(0 to num_inputs-1);
+             BLK_IN:             in  std_logic_vector(num_inputs*word_size-1 downto 0);
+             OUT_FULL:           in  std_logic;
+             OUT_WR:             out std_logic;
+             BLK_OUT:            out std_logic_vector(word_size-1 downto 0);
+             IN_RD:              out std_logic_vector(0 to num_inputs-1);
+             FINAL_OUT:          out std_logic
+         );
 end logic_or;
 
 architecture IMP of logic_or is
@@ -40,7 +40,7 @@ architecture IMP of logic_or is
     type length_array is array(integer range <>) of unsigned(fill_counter_size-1 downto 0);
     signal input_length:         length_array(0 to num_inputs-1) := (others => (others => '0'));
     signal consumed_length:      length_array(0 to num_inputs-1) := (others => (others => '0'));
-    
+
     signal output_length:        unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal output_words_left:    integer := 0;
     signal done_consuming:       std_logic_vector(0 to num_inputs-1) := (others => '1');
@@ -66,10 +66,10 @@ begin
         return std_logic_vector is
         begin
             if (offset < input_length(input_idx) - consumed_length(input_idx)) then
-                    -- offset points to the current word
+                -- offset points to the current word
                 return decode_single(word_size, current_word(input_idx));
             else
-                    -- offset is too large, use the next word
+                -- offset is too large, use the next word
                 return decode_single(word_size, next_word(input_idx));
             end if;
         end get_input_block_at;
@@ -99,8 +99,8 @@ begin
         --
         impure function done_reading
         return boolean is
-            variable done: boolean := true;
-            variable done_loc: boolean := false;
+        variable done: boolean := true;
+        variable done_loc: boolean := false;
         begin
             for input_idx in 0 to num_inputs-1 loop
                 -- reading is done, when the current type is either a literal or none or if the
@@ -135,14 +135,14 @@ begin
         --
         impure function is_final
         return boolean is
-            variable ret_value: boolean := false;
+        variable ret_value: boolean := false;
         begin
             for input_idx in 0 to num_inputs-1 loop
                 -- an input is final if it's final signal has been received and there is neither
                 -- a next word nor consumable length in the current word left
                 ret_value := ret_value or (final_received(input_idx) = '1'
-                                           and next_type(input_idx) = W_NONE
-                                           and input_length(input_idx) = consumed_length(input_idx));
+                and next_type(input_idx) = W_NONE
+                and input_length(input_idx) = consumed_length(input_idx));
             end loop;
             return ret_value;
         end is_final;
@@ -169,7 +169,7 @@ begin
         -- sets done_consuming to true for all fully consumed current words
         --
         procedure set_done_consuming is
-            variable done: boolean := false;
+        variable done: boolean := false;
         begin
             for input_idx in 0 to num_inputs-1 loop
                 if (input_length(input_idx) <= consumed_length(input_idx)) then
@@ -197,7 +197,7 @@ begin
 
                 input_length          <= (others => (others => '0'));
                 consumed_length       <= (others => (others => '0'));
-                
+
                 output_length         <= (others => '0');
                 output_words_left     <= 0;
                 done_consuming        <= (others => '1');
@@ -225,8 +225,8 @@ begin
         -- prepare the next word to become the current word and read a new next word
         --
         procedure read_input (input_idx: natural) is
-            variable new_fill_length: unsigned(fill_counter_size-1 downto 0);
-            variable new_read_word:   std_logic_vector(word_size-1 downto 0) := BLK_IN(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
+                              variable new_fill_length: unsigned(fill_counter_size-1 downto 0);
+                              variable new_read_word:   std_logic_vector(word_size-1 downto 0) := BLK_IN(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
         begin
             if (in_rd_loc(input_idx) = '1') then
                 -- an input word is ready to be read into the next_word buffer
@@ -244,18 +244,18 @@ begin
 
                     input_length(input_idx) <= new_fill_length;
 
-                    if ((consumed_length(input_idx) = new_fill_length) or (parse_word_type(word_size, new_read_word) = next_type(input_idx))) then
-                        -- if all output is done, continue reading to see whether or not the fill needs to be extended
+                    if (parse_word_type(word_size, new_read_word) = next_type(input_idx)) then
+                        -- continue reading if the fill continues in the next word
                         in_rd_loc(input_idx) <= '1';
                     else
                         in_rd_loc(input_idx) <= '0';
                     end if;
                 elsif next_type(input_idx) = W_LITERAL then
-                        -- prepare to handle a literal word
+                    -- prepare to handle a literal word
                     input_length(input_idx) <= to_unsigned(1, fill_counter_size);
                     consumed_length(input_idx) <= (others => '0');
-                        -- read further once all reading and writing is done
-                    in_rd_loc(input_idx) <= to_std_logic(done_reading and continue_last_output);
+                    -- don't read further immediately
+                    in_rd_loc(input_idx) <= '0';
                 else
                     if final_received(input_idx) = '0' then
                         -- word type is unknown --> set everything to 0
@@ -317,8 +317,8 @@ begin
 
                 -- extend this output if it is a fill of the same type as the following one
                 continue_last_output_var := (get_output_block_value(to_unsigned(0, fill_counter_size))
-                                        = get_output_block_value(consumable_length))
-                                        and parse_block_type(word_size, next_output_block) /= W_LITERAL;
+                = get_output_block_value(consumable_length))
+                and parse_block_type(word_size, next_output_block) /= W_LITERAL;
 
                 out_wr_loc <= '0';
             elsif (done_reading and output_words_left_var > 0) then
@@ -350,7 +350,7 @@ begin
                 out_wr_loc <= '0';
             end if;
 
-                -- persist variables
+            -- persist variables
             output_length <= output_length_var;
             output_words_left <= output_words_left_var;
             continue_last_output <= continue_last_output_var;
