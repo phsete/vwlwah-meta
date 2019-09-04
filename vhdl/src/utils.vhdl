@@ -123,9 +123,10 @@ package body utils is
     begin
         lower_bound := (word_size-1) / factor * index;
         upper_bound := (word_size-1) / factor * (index + 1);
-
         result(scale_down(word_size, factor)-1) := '0';
-        result(scale_down(word_size, factor)-2 downto 0) := input_word(upper_bound-1 downto lower_bound);
+        for idx in scale_down(word_size, factor)-2 downto 0 loop
+            result(idx) := input_word(lower_bound + idx);
+        end loop;
 
         return result;
     end split_literal;
