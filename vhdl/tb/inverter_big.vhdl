@@ -25,7 +25,7 @@ architecture behav of inverter_big is
     -- Declaration of the components that will be instantiated.
     component inverter is
         Generic (
-                    word_size:           natural := 8;
+                    word_size:           natural := 5;
                     fill_counter_size:   natural := 32
                 );
         port (
@@ -45,7 +45,7 @@ architecture behav of inverter_big is
     component input_fifo
         Generic (
                     constant addr_width: natural := 3;
-                    constant word_size: natural := 8
+                    constant word_size: natural := 5
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
                WR_EN    : in  STD_LOGIC;
@@ -63,7 +63,7 @@ architecture behav of inverter_big is
     component output_fifo
         Generic (
                     constant addr_width: natural := 3;
-                    constant word_size: natural := 8
+                    constant word_size: natural := 5
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
                WR_EN    : in  STD_LOGIC;
@@ -84,8 +84,8 @@ architecture behav of inverter_big is
     for output_fifo_0: output_fifo use entity work.FIFO_bb;
 
     -- inner signals
-    signal blk_in:          std_logic_vector(7 downto 0);
-    signal blk_out:         std_logic_vector(7 downto 0);
+    signal blk_in:          std_logic_vector(4 downto 0);
+    signal blk_out:         std_logic_vector(4 downto 0);
     signal in_empty:        std_logic;
     signal out_full:        std_logic;
     signal in_rd:           std_logic;
@@ -95,10 +95,10 @@ architecture behav of inverter_big is
 
     -- outer signals
     signal outer_clk:      std_logic;
-    signal outer_input:    std_logic_vector(7 downto 0);
+    signal outer_input:    std_logic_vector(4 downto 0);
     signal outer_wr_en:    std_logic;
     signal outer_rd_en:    std_logic;
-    signal outer_output:   std_logic_vector(7 downto 0);
+    signal outer_output:   std_logic_vector(4 downto 0);
     signal outer_empty:    std_logic;
     signal outer_full:     std_logic;
     signal outer_final_in:  std_logic;
@@ -153,9 +153,9 @@ architecture behav of inverter_big is
             variable read_col_from_output_buf: line;
 
             variable input_final:  std_logic;
-            variable input_word:   std_logic_vector(7 downto 0);
+            variable input_word:   std_logic_vector(4 downto 0);
             variable expected_final: std_logic;
-            variable expected_word:  std_logic_vector(7 downto 0);
+            variable expected_word:  std_logic_vector(4 downto 0);
 
             variable space: character;
             variable available: boolean;

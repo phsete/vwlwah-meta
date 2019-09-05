@@ -20,7 +20,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  logic_or_big
+	  inverter_big
 
 GHDL_CMD=ghdl
 
