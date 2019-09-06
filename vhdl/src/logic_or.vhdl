@@ -226,8 +226,10 @@ begin
         --
         procedure read_input (input_idx: natural) is
                               variable new_fill_length: unsigned(fill_counter_size-1 downto 0);
-                              variable new_read_word:   std_logic_vector(word_size-1 downto 0) := BLK_IN(((input_idx+1) * word_size) - 1 downto input_idx * word_size);
+                              variable new_read_word:   std_logic_vector(word_size-1 downto 0);
         begin
+            -- select correct input
+            new_read_word := std_logic_vector(shift_right(unsigned(BLK_IN), input_idx * word_size)(word_size-1 downto 0));
             if (in_rd_loc(input_idx) = '1') then
                 -- an input word is ready to be read into the next_word buffer
                 -- --> handle current next_word buffer content first as it will become the current word now

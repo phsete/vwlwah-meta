@@ -143,14 +143,20 @@ package body utils is
     num_extensions: natural)
     return std_logic_vector is
         variable new_literal: std_logic_vector(new_word_size-1 downto 0);
+        variable new_literal_mask: std_logic_vector(new_word_size-1 downto 0);
+        variable new_literal_tmp: std_logic_vector(new_word_size-1 downto 0);
         variable upper_bound: natural;
         variable lower_bound: natural;
     begin
         new_literal := old_literal;
         for extension in 0 to num_extensions-1 loop
-            upper_bound := ((word_size-1) * (from_index+1 - extension) - 1);
-            lower_bound := ((word_size-1) * (from_index - extension));
-            new_literal(upper_bound downto lower_bound) := new_block;
+            new_literal_tmp := (others => '0');
+            new_literal_mask := (others => '1');
+            new_literal_tmp(word_size-2 downto 0) := new_block;
+            new_literal_mask(word_size-2 downto 0) := (others => '0');
+            new_literal_tmp := std_logic_vector(shift_left(unsigned(new_literal_tmp), (word_size-1) * from_index - extension));
+            new_literal_mask := std_logic_vector(shift_left(unsigned(new_literal_mask), (word_size-1) * from_index - extension));
+            new_literal := (new_literal and new_literal_mask) or new_literal_tmp;
         end loop;
         return new_literal;
     end extend_literal;
@@ -289,7 +295,7 @@ package body utils is
         buf(word_size-2)          := fill_type;
 
         -- copy the related (word_size-2) bits of the length representation vector
-        buf(word_size-3 downto 0) := length_vector(lowest_bit_idx + (word_size-3) downto lowest_bit_idx);
+        buf(word_size-3 downto 0) := std_logic_vector(shift_right(unsigned(length_vector), lowest_bit_idx)(word_size-3 downto 0));
         return buf;
     end encode_fill;
 
