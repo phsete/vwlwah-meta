@@ -1,3 +1,4 @@
+
 # Do not use make's built-in rules and variables
 # (this increases performance and avoids hard-to-debug behaviour);
 MAKEFLAGS += -r
@@ -32,7 +33,7 @@ all: compile
 
 run:
 	rm -f wave.ghw
-	$(GHDL_CMD) -r $(TESTBENCH) --wave=wave.ghw
+	$(GHDL_CMD) -r --workdir=$(BINDIR) --std=08 --work=work $(TESTBENCH) --wave=wave.ghw
 
 compile:
 	mkdir -p bin
@@ -43,11 +44,12 @@ compile:
 
 dump:
 	rm -f dump
-	$(GHDL_CMD) -r $(TESTBENCH) --trace-signals > dump
+	$(GHDL_CMD) -r --workdir=$(BINDIR) --std=08 --work=work $(TESTBENCH) --trace-signals > dump
 
-wave:
+wave: compile
 	rm -f wave.ghw
-	$(GHDL_CMD) -r $(TESTBENCH) --wave=wave.ghw
+	$(GHDL_CMD) -r --workdir=$(BINDIR) --std=08 --work=work $(TESTBENCH) --wave=wave.ghw
+	gtkwave wave.ghw
 
 clean:
 	$(GHDL_CMD) --clean --workdir=$(BINDIR)
