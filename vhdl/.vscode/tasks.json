@@ -1,0 +1,31 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start vcXsrv (Windows)",
+            "type": "shell",
+            "command": "echo 'C:\\Programme\\VcXsrv\\vcxsrv.exe :0 -ac -terminate -lesspointer -multiwindow -clipboard -wgl -dpi auto' | cmd",
+            "problemMatcher": [],
+            "runOptions": {}
+        },
+        {
+            "label": "Start GTKWave",
+            "type": "shell",
+            "command": "docker run -ti --rm vwl ; taskkill /IM vcxsrv.exe /T /F",
+            "problemMatcher": [],
+            "dependsOn": "Start vcXsrv (Windows)"
+        },
+        {
+            "label": "Build Image",
+            "type": "shell",
+            "command": "docker build -t vwl .",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
