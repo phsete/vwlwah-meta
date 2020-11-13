@@ -131,11 +131,17 @@ architecture behav of encoderMETA_tb is
     signal blk_in_meta:     std_logic_vector(general_word_size-1 downto 0);
     signal blk_out_meta:    std_logic_vector(general_word_size-1 downto 0);
     signal in_empty:        std_logic;
+    signal in_empty_meta:   std_logic;
     signal out_full:        std_logic;
     signal in_rd:           std_logic;
     signal out_wr:          std_logic;
+    signal out_full_meta:   std_logic;
+    signal in_rd_meta:      std_logic;
+    signal out_wr_meta:     std_logic;
     signal final_in:        std_logic;
     signal final_out:       std_logic;
+    signal final_in_meta:   std_logic;
+    signal final_out_meta:   std_logic;
 
     -- outer signals
     signal outer_clk:      std_logic;
@@ -170,13 +176,13 @@ architecture behav of encoderMETA_tb is
         port map (clk => outer_clk,
                 blk_in => blk_in_meta,
                 blk_out => blk_out_meta,
-                in_empty => in_empty,
-                out_full => out_full,
-                in_rd => in_rd,
-                final_in => final_in,
-                final_out => final_out,
+                in_empty => in_empty_meta,
+                out_full => out_full_meta,
+                in_rd => in_rd_meta,
+                final_in => final_in_meta,
+                final_out => final_out_meta,
                 reset => outer_reset,
-                out_wr => out_wr);
+                out_wr => out_wr_meta);
 
         input_fifo_0: input_fifo
         port map (CLK => outer_clk,
@@ -193,26 +199,26 @@ architecture behav of encoderMETA_tb is
         mid_fifo_0: mid_fifo
         port map (CLK => outer_clk,
                 BLK_IN => blk_out,
-                WR_EN => outer_wr_en,
+                WR_EN => out_wr,
                 BLK_OUT => blk_in_meta,
-                RD_EN => in_rd,
-                EMPTY => in_empty,
-                FINAL_IN => outer_final_in,
-                FINAL_OUT => final_in,
+                RD_EN => in_rd_meta,
+                EMPTY => in_empty_meta,
+                FINAL_IN => final_out,
+                FINAL_OUT => final_in_meta,
                 RESET => outer_reset,
-                FULL => outer_full);
+                FULL => out_full);
 
         output_fifo_0: output_fifo
         port map (CLK => outer_clk,
                   BLK_IN => blk_out_meta,
-                  WR_EN => out_wr,
+                  WR_EN => out_wr_meta,
                   BLK_OUT => outer_output,
                   RD_EN => outer_rd_en,
                   EMPTY => outer_empty,
-                  FINAL_IN => final_out,
+                  FINAL_IN => final_out_meta,
                   FINAL_OUT => outer_final_out,
                   RESET => outer_reset,
-                  FULL => out_full);
+                  FULL => out_full_meta);
 
         --  This process does the real job.
         process

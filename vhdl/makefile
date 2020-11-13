@@ -32,7 +32,7 @@ BINDIR=bin
 
 all: compile
 
-run:
+run: compile
 	rm -f wave.ghw
 	$(GHDL_CMD) -r --workdir=$(BINDIR) --std=08 --work=work $(TESTBENCH) --wave=wave.ghw
 

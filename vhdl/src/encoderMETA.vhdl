@@ -26,6 +26,18 @@ end encoderMETA;
 
 architecture IMP of encoderMETA is
 
+    -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
+    function to_string ( a: std_logic_vector) return string is
+        variable b : string (1 to a'length) := (others => NUL);
+        variable stri : integer := 1; 
+    begin
+        for i in a'range loop
+            b(stri) := std_logic'image(a((i)))(2);
+            stri := stri+1;
+        end loop;
+        return b;
+    end function;
+
     type Word_Sequence is (W_LITERAL, W_0FILL, W_1FILL, W_0FILL_1FILL, W_1FILL_0FILL, W_0FILL_LITERAL, W_1FILL_LITERAL, W_NONE);
 
     signal zero_fill_length:    unsigned(fill_counter_size-1 downto 0) := (others => '0');
