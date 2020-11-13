@@ -15,7 +15,7 @@ entity encoderMETA is
         RESET:              in  std_logic;
         IN_EMPTY:           in  std_logic;
         FINAL_IN:           in  std_logic;
-        BLK_IN:             in  std_logic_vector(word_size-2 downto 0);
+        BLK_IN:             in  std_logic_vector(word_size-1 downto 0);
         OUT_FULL:           in  std_logic;
         OUT_WR:             out std_logic;
         BLK_OUT:            out std_logic_vector(word_size-1 downto 0);
@@ -30,7 +30,7 @@ architecture IMP of encoderMETA is
 
     signal zero_fill_length:    unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal one_fill_length:     unsigned(fill_counter_size-1 downto 0) := (others => '0');
-    signal input_buffer:        std_logic_vector(word_size-2 downto 0) := (others => 'U');
+    signal input_buffer:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal literal_buffer:      std_logic_vector(word_size-2 downto 0) := (others => 'U');
     signal output_buffer:       std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:     std_logic := '0';
@@ -86,6 +86,10 @@ begin
             else
                 -- no input and not final -> stall
                 out_wr_loc <= '0';
+            end if;
+
+            if (final) then
+                FINAL_OUT <= '1';
             end if;
         end procedure;
 

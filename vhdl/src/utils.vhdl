@@ -355,10 +355,10 @@ package body utils is
     input_word: std_logic_vector)
     return Word is
     begin
-        if input_word(word_size-2) = '0' then
+        if input_word(word_size-1) = '0' then
             return W_LITERAL;
-        elsif input_word(word_size-2) = '1' then
-            if input_word(word_size-3) = '0' then
+        elsif input_word(word_size-1) = '1' then
+            if input_word(word_size-2) = '0' then
                 return W_0FILL;
             else
                 return W_1FILL;

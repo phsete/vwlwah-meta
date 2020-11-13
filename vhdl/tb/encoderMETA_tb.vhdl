@@ -12,7 +12,6 @@ entity encoderMETA_tb is
 architecture behav of encoderMETA_tb is
 
     constant general_word_size : natural := 32;
-    constant vwlwah_word_size : natural := general_word_size-1;
 
     -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
     function to_string ( a: std_logic_vector) return string is
@@ -29,7 +28,7 @@ architecture behav of encoderMETA_tb is
     -- Declaration of the components that will be instantiated.
     component encoder
         Generic (
-                    constant word_size: natural := vwlwah_word_size;
+                    constant word_size: natural := general_word_size;
                     constant fill_counter_size: natural := 32
                 );
         Port (
@@ -53,7 +52,7 @@ architecture behav of encoderMETA_tb is
                 );
         Port (
                  clk:           in std_logic;
-                 blk_in:        in std_logic_vector(word_size-2 downto 0);
+                 blk_in:        in std_logic_vector(word_size-1 downto 0);
                  in_empty:      in std_logic;
                  out_full:      in std_logic;
                  blk_out:       out std_logic_vector(word_size-1 downto 0);
@@ -68,7 +67,7 @@ architecture behav of encoderMETA_tb is
     component input_fifo
         Generic (
                     constant addr_width: natural := 3;
-                    constant word_size: natural := vwlwah_word_size-1
+                    constant word_size: natural := general_word_size-1
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
                WR_EN    : in  STD_LOGIC;
@@ -86,7 +85,7 @@ architecture behav of encoderMETA_tb is
     component mid_fifo
         Generic (
                     constant addr_width: natural := 3;
-                    constant word_size: natural := vwlwah_word_size
+                    constant word_size: natural := general_word_size
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
                WR_EN    : in  STD_LOGIC;
@@ -127,9 +126,9 @@ architecture behav of encoderMETA_tb is
     for output_fifo_0: output_fifo use entity work.FIFO_bb;
 
     -- inner signals
-    signal blk_in:          std_logic_vector(vwlwah_word_size-2 downto 0);
-    signal blk_out:         std_logic_vector(vwlwah_word_size-1 downto 0);
-    signal blk_in_meta:     std_logic_vector(general_word_size-2 downto 0);
+    signal blk_in:          std_logic_vector(general_word_size-2 downto 0);
+    signal blk_out:         std_logic_vector(general_word_size-1 downto 0);
+    signal blk_in_meta:     std_logic_vector(general_word_size-1 downto 0);
     signal blk_out_meta:    std_logic_vector(general_word_size-1 downto 0);
     signal in_empty:        std_logic;
     signal out_full:        std_logic;
@@ -140,7 +139,7 @@ architecture behav of encoderMETA_tb is
 
     -- outer signals
     signal outer_clk:      std_logic;
-    signal outer_input:    std_logic_vector(vwlwah_word_size-2 downto 0);
+    signal outer_input:    std_logic_vector(general_word_size-2 downto 0);
     signal outer_wr_en:    std_logic;
     signal outer_rd_en:    std_logic;
     signal outer_output:   std_logic_vector(general_word_size-1 downto 0);
@@ -221,12 +220,12 @@ architecture behav of encoderMETA_tb is
             variable read_col_from_output_buf: line;
 
             variable input_final:  std_logic;
-            variable input_word:   std_logic_vector(vwlwah_word_size-2 downto 0);
+            variable input_word:   std_logic_vector(general_word_size-2 downto 0);
 
             variable space: character;
             variable available: boolean;
         begin
-            file_open(input_buf, "tb/data/encoder30_in.txt", read_mode);
+            file_open(input_buf, "tb/data/encoder31_in.txt", read_mode);
 
             -- first perform full reset
             outer_reset <= '0';
