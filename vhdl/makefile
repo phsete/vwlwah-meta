@@ -11,6 +11,7 @@ MODULES=\
 	  fifo_b32 \
 	  inverter \
 	  encoder \
+	  encoderMETA \
 	  decoder \
 	  logic_or \
 	  AXIS2FIFO_v1_0 \
@@ -21,7 +22,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  encoder_big
+	  encoderMETA_tb
 
 GHDL_CMD=ghdl
 

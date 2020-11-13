@@ -73,6 +73,10 @@ package utils is
     input_word: std_logic_vector)
     return Word;
 
+    function parse_vwlwah_block_type (word_size: natural;
+    input_word: std_logic_vector)
+    return Word;
+
     function logic_function (in0, in1: std_logic_vector)
     return std_logic_vector;
 
@@ -343,6 +347,26 @@ package body utils is
             return W_LITERAL;
         end if;
     end parse_block_type;
+
+    --
+    -- determine the type of input_word by parsing identifying the contents as fill or literal
+    --
+    function parse_vwlwah_block_type (word_size: natural;
+    input_word: std_logic_vector)
+    return Word is
+    begin
+        if input_word(word_size-2) = '0' then
+            return W_LITERAL;
+        elsif input_word(word_size-2) = '1' then
+            if input_word(word_size-3) = '0' then
+                return W_0FILL;
+            else
+                return W_1FILL;
+            end if;
+        else
+            return W_NONE;
+        end if;
+    end parse_vwlwah_block_type;
 
     --
     -- actual implementation of the logic or function
