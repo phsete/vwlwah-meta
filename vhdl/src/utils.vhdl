@@ -57,11 +57,20 @@ package utils is
     content: std_logic_vector)
     return std_logic_vector;
 
+    function encode_literal_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector;
+
     function encode_fill (word_size: natural;
     fill_counter_size: natural;
     fill_type: std_logic;
     length: unsigned;
     word_no: natural)
+    return std_logic_vector;
+
+    function encode_fill_compax (word_size: natural;
+    fill_counter_size: natural;
+    length: unsigned)
     return std_logic_vector;
 
     function fill_words_needed (word_size: natural;
@@ -277,6 +286,20 @@ package body utils is
     end encode_literal;
 
     --
+    -- returns an encoded literal word with the given content in compax format
+    --
+    function encode_literal_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        -- set control bit and copy word contents
+        buf(word_size-1) := '1';
+        buf(word_size-2 downto 0) := content;
+        return buf;
+    end encode_literal_compax;
+
+    --
     -- returns an encoded fill word of the given type.
     -- the total length of the fill is gven by the parameter length.
     -- for concatenated fills, word_no is the reversed position of the fill word inside the concatenated group
@@ -302,6 +325,27 @@ package body utils is
         buf(word_size-3 downto 0) := std_logic_vector(shift_right(unsigned(length_vector), lowest_bit_idx)(word_size-3 downto 0));
         return buf;
     end encode_fill;
+
+    --
+    -- returns an encoded fill word of the given type in compax format.
+    -- the total length of the fill is given by the parameter length.
+    --
+    function encode_fill_compax (word_size: natural;
+    fill_counter_size: natural;
+    length: unsigned)
+    return std_logic_vector is
+        variable length_vector: std_logic_vector(fill_counter_size-1 downto 0);
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        length_vector := std_logic_vector(length);
+
+        -- set control bits
+        buf(word_size-1 downto word_size-3) := "000";
+
+        -- copy the related (word_size-2) bits of the length representation vector
+        buf(word_size-4 downto 0) := std_logic_vector(length_vector(word_size-4 downto 0));
+        return buf;
+    end encode_fill_compax;
 
     --
     -- returns the number of fill words needed to represent a fill of the given length
