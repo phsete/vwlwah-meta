@@ -90,6 +90,7 @@ begin
                 -- ready to read input value
                 case parse_vwlwah_block_type(word_size, input_buffer) is
                     when W_0FILL =>
+                        out_wr_loc <= '0';
                         zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                         if(previous_buffer_type = W_FL) then
                             buffer_type <= W_FLF;
@@ -99,9 +100,11 @@ begin
                             buffer_type <= W_0FILL;
                         end if;
                     when W_1FILL =>
+                        out_wr_loc <= '0';
                         one_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                         buffer_type <= W_1FILL;
                     when W_LITERAL =>
+                        out_wr_loc <= '0';
                         literal_buffer <= input_buffer(word_size-2 downto 0);
                         if(previous_buffer_type = W_0FILL) then
                             buffer_type <= W_FL;
