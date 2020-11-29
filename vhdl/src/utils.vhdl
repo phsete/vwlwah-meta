@@ -73,6 +73,18 @@ package utils is
     length: unsigned)
     return std_logic_vector;
 
+    function encode_flf (word_size: natural;
+    zero_fill_length: unsigned;
+    flf_zero_fill_length: unsigned;
+    literal_buffer: std_logic_vector)
+    return std_logic_vector;
+
+    function encode_lfl (word_size: natural;
+    zero_fill_length: unsigned;
+    literal_buffer: std_logic_vector;
+    lfl_literal_buffer: std_logic_vector)
+    return std_logic_vector;
+
     function fill_words_needed (word_size: natural;
     fill_counter_size: natural;
     length: unsigned)
@@ -325,6 +337,38 @@ package body utils is
         buf(word_size-3 downto 0) := std_logic_vector(shift_right(unsigned(length_vector), lowest_bit_idx)(word_size-3 downto 0));
         return buf;
     end encode_fill;
+
+    --
+    -- returns an encoded flf word
+    --
+    function encode_flf (word_size: natural;
+    zero_fill_length: unsigned;
+    flf_zero_fill_length: unsigned;
+    literal_buffer: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        buf(word_size-1 downto word_size-3) := "010";
+        buf(word_size-4 downto 0) := (others => '0');
+
+        return buf;
+    end encode_flf;
+
+    --
+    -- returns an encoded lfl word
+    --
+    function encode_lfl (word_size: natural;
+    zero_fill_length: unsigned;
+    literal_buffer: std_logic_vector;
+    lfl_literal_buffer: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        buf(word_size-1 downto word_size-3) := "001";
+        buf(word_size-4 downto 0) := (others => '0');
+
+        return buf;
+    end encode_lfl;
 
     --
     -- returns an encoded fill word of the given type in compax format.
