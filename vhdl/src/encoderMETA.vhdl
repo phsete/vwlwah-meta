@@ -38,13 +38,14 @@ architecture IMP of encoderMETA is
         return b;
     end function;
 
-    type Word_Sequence is (W_LITERAL, W_0FILL, W_1FILL, W_FL, W_FLF, W_LF, W_LFL, W_NONE, W_WAIT);
+    type Word_Sequence is (W_LITERAL, W_NCLITERAL, W_0FILL, W_1FILL, W_FL, W_FLF, W_OF, W_OFF, W_OFF2, W_LF, W_LFL, W_NONE, W_WAIT);
 
     signal zero_fill_length:        unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal flf_zero_fill_length:    unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal one_fill_length:         unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal input_buffer:            std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal literal_buffer:          std_logic_vector(word_size-2 downto 0) := (others => 'U');
+    signal snd_literal_buffer:      std_logic_vector(word_size-2 downto 0) := (others => 'U');
     signal lfl_literal_buffer:      std_logic_vector(word_size-2 downto 0) := (others => 'U');
     signal output_buffer:           std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:         std_logic := '0';
@@ -73,6 +74,7 @@ begin
                 one_fill_length         <= (others => '0');
                 input_buffer            <= (others => 'U');
                 literal_buffer          <= (others => 'U');
+                snd_literal_buffer      <= (others => 'U');
                 lfl_literal_buffer      <= (others => 'U');
                 output_buffer           <= (others => 'U');
                 input_available         <= '0';
@@ -87,14 +89,16 @@ begin
 
         procedure check_final is
         begin
-            if (final and buffer_type = W_NONE and state = W_NONE) then
+            if (final and state = W_NONE and buffer_type = W_NONE) then
                 FINAL_OUT <= '1';
             end if;
         end procedure;
-
+ 
         procedure output_1Fill is
         begin
-            report("output1Fill");
+            report("output 1-Fill");
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             -- output of 1 fill (as Literal)
             output_buffer <= (word_size-1 downto 0 => '1');
 
@@ -106,54 +110,81 @@ begin
                 -- reset counters and buffer type to read next word
                 buffer_type <= W_NONE;
                 one_fill_length <= to_unsigned(0, fill_counter_size);
-
-                check_final;
             end if;
         end procedure;
 
         procedure output_0Fill is
         begin
-            report("output0Fill");
+            report("output 0-Fill");
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             -- output of 0 fill
             output_buffer <= encode_fill_compax(word_size, fill_counter_size, zero_fill_length);
             -- TODO: extended Fill (fill-length verringern und checken ob > 0!)
 
             buffer_type <= W_NONE;
-
-            check_final;
         end procedure;
 
         procedure output_Literal is
         begin
-            report("outputLiteral");
+            report("output Literal");
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             -- output of Literal
             output_buffer <= encode_literal_compax(word_size, literal_buffer);
+            if(not is_all(snd_literal_buffer, 'U')) then
+                literal_buffer <= snd_literal_buffer;
+                snd_literal_buffer <= (others => 'U');
+            else
+                literal_buffer <= (others => 'U');
+            end if;
 
             buffer_type <= W_NONE;
-
-            check_final;
         end procedure;
 
         procedure output_FLF is
         begin
-            report("outputFLF");
+            report("output FLF");
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             -- output of FLF
-            output_buffer <= encode_flf(word_size, zero_fill_length, flf_zero_fill_length, literal_buffer);
+            output_buffer <= encode_flf_main(word_size, literal_buffer);
+            literal_buffer <= (others => 'U');
 
-            buffer_type <= W_NONE;
+            buffer_type <= W_OFF;
+        end procedure;
 
-            check_final;
+        procedure output_FF is
+        begin
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
+            -- output of FLF
+            if(buffer_type = W_OFF or buffer_type = W_OF) then
+                report("output fill of flf/lfl");
+                output_buffer <= encode_flf_fill(word_size, zero_fill_length);
+                if(buffer_type = W_OFF) then
+                    buffer_type <= W_OFF2;
+                else
+                    buffer_type <= W_NONE;
+                end if;
+            else
+                report("output fill of flf");
+                output_buffer <= encode_flf_fill(word_size, flf_zero_fill_length);
+                buffer_type <= W_NONE;
+            end if;
         end procedure;
 
         procedure output_LFL is
         begin
-            report("outputLFL");
+            report("output LFL");
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             -- output of LFL
-            output_buffer <= encode_lfl(word_size, zero_fill_length, literal_buffer, lfl_literal_buffer);
+            output_buffer <= encode_lfl(word_size, literal_buffer, lfl_literal_buffer);
+            literal_buffer <= (others => 'U');
+            lfl_literal_buffer <= (others => 'U');
 
-            buffer_type <= W_NONE;
-
-            check_final;
+            buffer_type <= W_OF;
         end procedure;
 
         --
@@ -165,7 +196,7 @@ begin
                 -- ready to read input value
                 case parse_vwlwah_block_type(word_size, input_buffer) is
                     when W_0FILL =>
-                        report("0-Fill");
+                        report("detected 0-Fill");
                         if(state = W_NONE) then -- set new fill length
                             state <= W_0FILL;
                             zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
@@ -174,39 +205,70 @@ begin
                             zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                         elsif(state = W_FL) then -- set second fill length and output flf (reset fill lengths?)
                             flf_zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
-                            output_FLF;
                             state <= W_NONE;
+                            output_FLF;
                         elsif(state = W_LITERAL) then -- set new fill length
                             state <= W_LF;
                             zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                         elsif(state = W_LF) then -- output previous Literal and 0-Fill and set new fill length
-                            output_Literal;
+                            --output_Literal;
                             buffer_type <= W_0FILL; -- outputs 0-Fill next clock cycle
                             zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
+                        elsif(state = W_NCLITERAL) then
+                            output_Literal;
+                            state <= W_0FILL;
                         end if;
                     when W_1FILL =>
-                        report("1-Fill");
+                        report("detected 1-Fill");
                         output_1Fill;
                     when W_LITERAL =>
-                        report("Literal");
+                        report("detected Literal");
                         if(state = W_NONE) then
-                            state <= W_LITERAL;
+                            if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
+                                state <= W_NCLITERAL;
+                            else
+                                state <= W_LITERAL;
+                            end if;
                             literal_buffer <= input_buffer(word_size-2 downto 0);
                         elsif(state = W_0FILL) then
-                            state <= W_FL;
+                            if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
+                                output_0Fill;
+                                state <= W_NCLITERAL;
+                            else
+                                state <= W_FL;
+                            end if;
                             literal_buffer <= input_buffer(word_size-2 downto 0);
                         elsif(state = W_FL) then
+                            if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
+                                state <= W_NCLITERAL;
+                            else
+                                state <= W_LITERAL;
+                            end if;
                             output_0Fill;
                             buffer_type <= W_LITERAL; -- outputs Literal next clock cycle
-                            state <= W_LITERAL;
-                            literal_buffer <= input_buffer(word_size-2 downto 0);
+                            snd_literal_buffer <= input_buffer(word_size-2 downto 0);
                         elsif(state = W_LITERAL) then
+                            if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
+                                state <= W_NCLITERAL;
+                            else
+                                state <= W_LITERAL;
+                            end if;
                             output_Literal;
                             literal_buffer <= input_buffer(word_size-2 downto 0);
                         elsif(state = W_LF) then -- (reset literal buffers?)
-                            lfl_literal_buffer <= input_buffer(word_size-2 downto 0);
-                            output_LFL;
+                            if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
+                                output_Literal;
+                                buffer_type <= W_0FILL;
+                                state <= W_NCLITERAL;
+                                snd_literal_buffer <= input_buffer(word_size-2 downto 0);
+                            else
+                                state <= W_NONE;
+                                lfl_literal_buffer <= input_buffer(word_size-2 downto 0);
+                                buffer_type <= W_LFL;
+                            end if;
+                        elsif(state = W_NCLITERAL) then
+                            output_Literal;
                             state <= W_NONE;
                         end if;
                     when others =>
@@ -219,18 +281,15 @@ begin
                 elsif (state = W_FL) then
                     output_0Fill;
                     buffer_type <= W_LITERAL;-- outputs Literal next clock cycle
-                elsif (state = W_LITERAL) then
+                elsif (state = W_LITERAL or state = W_NCLITERAL) then
                     output_Literal;
                 elsif (state = W_LF) then
                     output_Literal;
                     buffer_type <= W_0FILL;-- outputs 0-Fill next clock cycle
                 else
-                    out_wr_loc <= '0';
+                    --out_wr_loc <= '0';
                 end if;
                 state <= W_NONE;
-            else
-                -- no input and not final -> stall
-                out_wr_loc <= '0';
             end if;
         end procedure;
 
@@ -240,9 +299,10 @@ begin
         -- rising edge
         --
         if (CLK'event and CLK='1') then
+            if(buffer_type /= W_OFF and buffer_type /= W_OFF2) then
+                out_wr_loc <= '0';
+            end if;
             if (running = '1') then
-                -- write by default, set to '0' otherwise
-                out_wr_loc <= '1';
                 case buffer_type is
                     when W_NONE =>
                         handle_next_block;
@@ -252,10 +312,16 @@ begin
                         output_0Fill;
                     when W_LITERAL =>
                         output_Literal;
+                    when W_OFF =>
+                        output_FF;
+                    when W_OFF2 =>
+                        output_FF;
+                    when W_OF =>
+                        output_FF;
+                    when W_LFL =>
+                        output_LFL;
                     when others =>
                 end case;
-
-                check_final;
 
                 if (buffer_type = W_NONE and IN_EMPTY = '0') then
                     input_available <= '1';
@@ -269,6 +335,9 @@ begin
         -- falling edge
         --
         if (CLK'event and CLK='0') then
+            -- probably wrong position of final check
+            check_final;
+
             if(buffer_type /= W_NONE) then
                 --previous_buffer_type <= buffer_type;
             end if;

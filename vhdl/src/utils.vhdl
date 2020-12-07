@@ -5,6 +5,18 @@ use ieee.numeric_std.all;
 package utils is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
 
+    function is_all (vec : std_logic_vector;
+    val : std_logic)
+    return boolean;
+
+    function get_dirty_quarter (word_size: natural;
+    input_word: std_logic_vector)
+    return natural;
+
+    function is_compressable (word_size: natural;
+    input_word: std_logic_vector)
+    return boolean;
+
     function scale_down (word_size: natural;
     factor: natural)
     return natural;
@@ -73,14 +85,15 @@ package utils is
     length: unsigned)
     return std_logic_vector;
 
-    function encode_flf (word_size: natural;
-    zero_fill_length: unsigned;
-    flf_zero_fill_length: unsigned;
+    function encode_flf_main (word_size: natural;
     literal_buffer: std_logic_vector)
     return std_logic_vector;
 
+    function encode_flf_fill (word_size: natural;
+    zero_fill_length: unsigned)
+    return std_logic_vector;
+
     function encode_lfl (word_size: natural;
-    zero_fill_length: unsigned;
     literal_buffer: std_logic_vector;
     lfl_literal_buffer: std_logic_vector)
     return std_logic_vector;
@@ -113,6 +126,50 @@ package utils is
 end;
 
 package body utils is
+
+    function is_all (vec : std_logic_vector; val : std_logic) return boolean is
+        constant all_bits : std_logic_vector(vec'range) := (others => val);
+    begin
+        return vec = all_bits;
+    end function;
+
+    function get_dirty_quarter (word_size: natural; input_word: std_logic_vector) return natural is
+    begin
+        if(is_all(input_word(word_size-2 downto (word_size/4)*3), '0')) then -- 0XXX
+            if(is_all(input_word((word_size/4)*3-1 downto (word_size/4)*2), '0')) then -- 00XX
+                if(is_all(input_word((word_size/4)*2-1 downto word_size/4), '0')) then -- 000X
+                    return 1;
+                else -- 001X
+                    if(is_all(input_word(word_size/4-1 downto 0), '0')) then -- 0010
+                        return 2;
+                    else -- 0011
+                        return 0;
+                    end if;
+                end if;
+            else -- 01XX
+                if(is_all(input_word((word_size/4)*2-1 downto word_size/4), '0') and is_all(input_word(word_size/4-1 downto 0), '0')) then -- 0100
+                    return 3;
+                else -- 01PP
+                    return 0;
+                end if;
+            end if;
+        else -- 1XXX
+            if(is_all(input_word((word_size/4)*3-1 downto (word_size/4)*2), '0') and is_all(input_word((word_size/4)*2-1 downto word_size/4), '0') and is_all(input_word(word_size/4-1 downto 0), '0')) then -- 1000
+                return 4;
+            else -- 1PPP
+                return 0;
+            end if;
+        end if;
+    end function;
+
+    function is_compressable (word_size: natural; input_word: std_logic_vector) return boolean is
+    begin
+        if(get_dirty_quarter(word_size, input_word) > 0) then
+            return true;
+        else
+            return false;
+        end if;
+    end function;
 
     --
     -- determines the new word size when blocks are splitted into facor parts
@@ -341,31 +398,87 @@ package body utils is
     --
     -- returns an encoded flf word
     --
-    function encode_flf (word_size: natural;
-    zero_fill_length: unsigned;
-    flf_zero_fill_length: unsigned;
+    function encode_flf_main (word_size: natural;
     literal_buffer: std_logic_vector)
     return std_logic_vector is
         variable buf: std_logic_vector(word_size-1 downto 0);
+        variable num_ununsed: natural;
+        variable dirty_quarter: natural;
     begin
+        dirty_quarter := get_dirty_quarter(word_size, literal_buffer);
+        num_ununsed := word_size-5-(word_size/4);
+        if(word_size > (word_size/4)*4) then
+            num_ununsed := num_ununsed + 1;
+        end if;
+
         buf(word_size-1 downto word_size-3) := "010";
-        buf(word_size-4 downto 0) := (others => '0');
+        buf(word_size-4 downto word_size-5) := std_logic_vector(to_unsigned(dirty_quarter-1, 2));
+
+        if(num_ununsed > 5) then
+            buf(word_size-6 downto word_size-num_ununsed-5) := (others => '0');
+        end if;
+
+        if(dirty_quarter = 4) then
+            buf(word_size-1-(word_size/4)*(dirty_quarter-1)) := '0';
+            buf(word_size-2-(word_size/4)*(dirty_quarter-1) downto 0) := literal_buffer(word_size-2 downto (word_size/4)*(dirty_quarter-1));
+        else
+            buf(word_size/4-1 downto 0) := literal_buffer((word_size/4)*dirty_quarter-1 downto (word_size/4)*(dirty_quarter-1));
+        end if;
 
         return buf;
-    end encode_flf;
+    end encode_flf_main;
+
+    function encode_flf_fill (word_size: natural;
+    zero_fill_length: unsigned)
+    return std_logic_vector is
+    begin
+        return std_logic_vector(zero_fill_length);
+    end encode_flf_fill;
 
     --
     -- returns an encoded lfl word
     --
     function encode_lfl (word_size: natural;
-    zero_fill_length: unsigned;
     literal_buffer: std_logic_vector;
     lfl_literal_buffer: std_logic_vector)
     return std_logic_vector is
         variable buf: std_logic_vector(word_size-1 downto 0);
+        variable num_ununsed: natural;
+        variable dirty_quarter: natural;
+        variable dirty_quarter_snd: natural;
+        variable ceiled_quarter: natural;
     begin
+        ceiled_quarter := word_size/4;
+        if(word_size > ceiled_quarter*4) then
+            ceiled_quarter := ceiled_quarter + 1;
+        end if;
+
+        dirty_quarter := get_dirty_quarter(word_size, literal_buffer);
+        dirty_quarter_snd := get_dirty_quarter(word_size, lfl_literal_buffer);
+
+        num_ununsed := ceiled_quarter*2-7-(ceiled_quarter*4-word_size);
+
         buf(word_size-1 downto word_size-3) := "001";
-        buf(word_size-4 downto 0) := (others => '0');
+        buf(word_size-4 downto word_size-5) := std_logic_vector(to_unsigned(dirty_quarter-1, 2));
+        buf(word_size-6 downto word_size-7) := std_logic_vector(to_unsigned(dirty_quarter_snd-1, 2));
+
+        if(num_ununsed > 7) then
+            buf(word_size-8 downto word_size-num_ununsed-7) := (others => '0');
+        end if;
+
+        if(dirty_quarter = 4) then
+            buf((word_size/4)+word_size-1-(word_size/4)*(dirty_quarter-1)) := '0';
+            buf((word_size/4)+word_size-2-(word_size/4)*(dirty_quarter-1) downto word_size/4) := literal_buffer(word_size-2 downto (word_size/4)*(dirty_quarter-1));
+        else
+            buf((word_size/4)+word_size/4-1 downto word_size/4) := literal_buffer((word_size/4)*dirty_quarter-1 downto (word_size/4)*(dirty_quarter-1));
+        end if;
+
+        if(dirty_quarter_snd = 4) then
+            buf(word_size-1-(word_size/4)*(dirty_quarter_snd-1)) := '0';
+            buf(word_size-2-(word_size/4)*(dirty_quarter_snd-1) downto 0) := lfl_literal_buffer(word_size-2 downto (word_size/4)*(dirty_quarter_snd-1));
+        else
+            buf(word_size/4-1 downto 0) := lfl_literal_buffer((word_size/4)*dirty_quarter_snd-1 downto (word_size/4)*(dirty_quarter_snd-1));
+        end if;
 
         return buf;
     end encode_lfl;
