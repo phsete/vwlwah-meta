@@ -13,6 +13,7 @@ MODULES=\
 	  encoder \
 	  encoderMETA \
 	  decoder \
+	  decoderMeta \
 	  logic_or \
 	  AXIS2FIFO_v1_0 \
 	  AXIS2FIFO_v1_0_S00_AXIS \
@@ -22,7 +23,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  encoderMETA_tb
+	  decoderMETA_tb
 
 GHDL_CMD=ghdl
 

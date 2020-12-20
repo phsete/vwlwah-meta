@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 package utils is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
+    type CompaxWord is (W_NONE, W_0FILL, W_1FILL, W_LITERAL, W_FLF, W_LFL, W_FLF_F1, W_FLF_F2, W_FLF_L, W_LFL_F);
 
     function is_all (vec : std_logic_vector;
     val : std_logic)
@@ -43,6 +44,10 @@ package utils is
     input_word: std_logic_vector)
     return Word;
 
+    function parse_word_type_compax (word_size: natural;
+    input_word: std_logic_vector)
+    return CompaxWord;
+
     function invert_F (word_size: natural;
     input_word: std_logic_vector)
     return std_logic_vector;
@@ -57,6 +62,23 @@ package utils is
 
     function decode_fill (word_size: natural;
     fill_type: std_logic)
+    return std_logic_vector;
+
+    function decode_literal_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector;
+
+    function decode_fill_compax (word_size: natural;
+    fill_type: std_logic)
+    return std_logic_vector;
+
+    function decode_flf_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector;
+
+    function decode_flf_f_compax (word_size: natural;
+    content: std_logic_vector;
+    fill_no: natural)
     return std_logic_vector;
 
     function parse_fill_length (word_size: natural;
@@ -263,6 +285,28 @@ package body utils is
     end parse_word_type;
 
     --
+    -- determine the word type of input_word by parsing the control bits for compax encoding
+    --
+    function parse_word_type_compax (word_size: natural;
+    input_word: std_logic_vector)
+    return CompaxWord is
+    begin
+        if input_word(word_size-1) = '1' then
+            return W_LITERAL;
+        elsif input_word(word_size-2) = '0' then
+            if input_word(word_size-3) = '1' then
+                return W_LFL;
+            else
+                return W_0FILL;
+            end if;
+        elsif input_word(word_size-2) = '1' then
+            return W_FLF;
+        else
+            return W_NONE;
+        end if;
+    end parse_word_type_compax;
+
+    --
     -- returns the inverse version of the input fill
     --
     function invert_F (word_size: natural;
@@ -317,6 +361,59 @@ package body utils is
 
         return buf;
     end decode_fill;
+
+    --
+    -- returns a decoded literal derived from the encoded input literal
+    --
+    function decode_literal_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector is
+    begin
+        -- determine output representation and write word to output buffer
+        return content(word_size-1 downto 0);
+    end decode_literal_compax;
+
+    --
+    -- returns a decoded fill block of the given type
+    --
+    function decode_fill_compax (word_size: natural;
+    fill_type: std_logic)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        -- fill all bits of buf with the given type
+        for idx in word_size-1 downto 0 loop
+            buf(idx)    := fill_type;
+        end loop;
+
+        return buf;
+    end decode_fill_compax;
+
+    function decode_flf_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable index: natural;
+    begin
+        index := natural(to_integer(unsigned(content(word_size-4 downto word_size-5))));
+        buf := (others => '0');
+        buf(index*(word_size/4)+word_size/4-1 downto index*(word_size/4)) := content(word_size/4-1 downto 0);
+
+        return buf;
+    end decode_flf_compax;
+
+    function decode_flf_f_compax (word_size: natural;
+    content: std_logic_vector;
+    fill_no: natural)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        buf(word_size-1 downto word_size-2) := "10";
+        buf(word_size-3 downto word_size-24) := (others => '0');
+        buf(word_size-25 downto 0) := content(word_size/4-1 downto 0);
+
+        return buf;
+    end decode_flf_f_compax;
 
     --
     -- concatenates the length of an encoded fill to the decoded old_fill_length and
