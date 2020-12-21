@@ -53,6 +53,8 @@ begin
         procedure handle_F (fill_type: std_logic) is
         begin
             report("Fill");
+            output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer);
+            OUT_WR_loc <= '1';
             if (final) then
                 -- mark the end of all output
                 FINAL_OUT <= '1';

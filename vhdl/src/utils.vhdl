@@ -69,7 +69,8 @@ package utils is
     return std_logic_vector;
 
     function decode_fill_compax (word_size: natural;
-    fill_type: std_logic)
+    fill_type: std_logic;
+    content: std_logic_vector)
     return std_logic_vector;
 
     function decode_flf_compax (word_size: natural;
@@ -370,21 +371,20 @@ package body utils is
     return std_logic_vector is
     begin
         -- determine output representation and write word to output buffer
-        return content(word_size-1 downto 0);
+        return '0' & content(word_size-2 downto 0);
     end decode_literal_compax;
 
     --
     -- returns a decoded fill block of the given type
     --
     function decode_fill_compax (word_size: natural;
-    fill_type: std_logic)
+    fill_type: std_logic;
+    content: std_logic_vector)
     return std_logic_vector is
         variable buf: std_logic_vector(word_size-1 downto 0);
     begin
-        -- fill all bits of buf with the given type
-        for idx in word_size-1 downto 0 loop
-            buf(idx)    := fill_type;
-        end loop;
+        buf(word_size-1 downto word_size-2) := '1' & fill_type;
+        buf(word_size-3 downto 0) := content(word_size-3 downto 0);
 
         return buf;
     end decode_fill_compax;
@@ -409,8 +409,8 @@ package body utils is
         variable buf: std_logic_vector(word_size-1 downto 0);
     begin
         buf(word_size-1 downto word_size-2) := "10";
-        buf(word_size-3 downto word_size-24) := (others => '0');
-        buf(word_size-25 downto 0) := content(word_size/4-1 downto 0);
+        buf(word_size-3 downto word_size/4) := (others => '0');
+        buf(word_size/4-1 downto 0) := content(word_size/4-1 downto 0);
 
         return buf;
     end decode_flf_f_compax;
