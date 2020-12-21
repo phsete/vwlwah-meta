@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 package utils is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
-    type CompaxWord is (W_NONE, W_0FILL, W_1FILL, W_LITERAL, W_FLF, W_LFL, W_FLF_F1, W_FLF_F2, W_FLF_L, W_LFL_F);
+    type CompaxWord is (W_NONE, W_0FILL, W_1FILL, W_LITERAL, W_FLF, W_LFL, W_FLF_F1, W_FLF_F2, W_FLF_L, W_LFL_L1, W_LFL_F, W_LFL_L2);
 
     function is_all (vec : std_logic_vector;
     val : std_logic)
@@ -78,8 +78,16 @@ package utils is
     return std_logic_vector;
 
     function decode_flf_f_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector;
+
+    function decode_lfl_compax (word_size: natural;
     content: std_logic_vector;
-    fill_no: natural)
+    literal_no: natural)
+    return std_logic_vector;
+
+    function decode_lfl_f_compax (word_size: natural;
+    content: std_logic_vector)
     return std_logic_vector;
 
     function parse_fill_length (word_size: natural;
@@ -403,8 +411,7 @@ package body utils is
     end decode_flf_compax;
 
     function decode_flf_f_compax (word_size: natural;
-    content: std_logic_vector;
-    fill_no: natural)
+    content: std_logic_vector)
     return std_logic_vector is
         variable buf: std_logic_vector(word_size-1 downto 0);
     begin
@@ -414,6 +421,32 @@ package body utils is
 
         return buf;
     end decode_flf_f_compax;
+
+    function decode_lfl_compax (word_size: natural;
+    content: std_logic_vector;
+    literal_no: natural)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable index: natural;
+    begin
+        index := natural(to_integer(unsigned(content(word_size-4-literal_no*2 downto word_size-5-literal_no*2))));
+        buf := (others => '0');
+        buf(index*(word_size/4)+word_size/4-1 downto index*(word_size/4)) := content(word_size/4-1+literal_no*(word_size/4) downto literal_no*(word_size/4));
+
+        return buf;
+    end decode_lfl_compax;
+
+    function decode_lfl_f_compax (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        buf(word_size-1 downto word_size-2) := "10";
+        buf(word_size-3 downto word_size/4) := (others => '0');
+        buf(word_size/4-1 downto 0) := content(word_size/4-1 downto 0);
+
+        return buf;
+    end decode_lfl_f_compax;
 
     --
     -- concatenates the length of an encoded fill to the decoded old_fill_length and

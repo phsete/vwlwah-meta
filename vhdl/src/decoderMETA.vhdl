@@ -84,7 +84,7 @@ begin
         begin
             report("FLF");
             -- prepare to output the current literal word
-            output_buffer <= decode_flf_f_compax(word_size, input_buffer, 1);
+            output_buffer <= decode_flf_f_compax(word_size, input_buffer);
             OUT_WR_loc <= '1';
             state <= W_FLF_F2;
 
@@ -99,14 +99,14 @@ begin
             report("FLF_F" & integer'image(fill_no));
             -- prepare to output the current literal word           
             if fill_no = 0 then
-                lfl_buffer <= decode_flf_compax(word_size, input_buffer);
+                flf_buffer <= decode_flf_compax(word_size, input_buffer);
                 state <= W_FLF;
             elsif fill_no = 2 then
-                output_buffer <= lfl_buffer;
+                output_buffer <= flf_buffer;
                 OUT_WR_loc <= '1';
                 state <= W_FLF_L;
             else
-                output_buffer <= decode_flf_f_compax(word_size, input_buffer, fill_no);
+                output_buffer <= decode_flf_f_compax(word_size, input_buffer);
                 OUT_WR_loc <= '1';
                 state <= W_NONE;
                 buffer_type <= W_NONE;
@@ -126,8 +126,38 @@ begin
             report("LFL");
             state <= W_LFL;
             -- prepare to output the current literal word
-            output_buffer <= decode_literal_compax(word_size, input_buffer);
+            output_buffer <= decode_lfl_compax(word_size, input_buffer, 1);
+            lfl_buffer <= decode_lfl_compax(word_size, input_buffer, 0);
             OUT_WR_loc <= '1';
+
+            if (final) then
+                -- mark the end of all output
+                FINAL_OUT <= '1';
+            end if;
+        end procedure;
+
+        procedure handle_LFL_F is
+        begin
+            report("LFL_F");
+            state <= W_LFL_F;
+            -- prepare to output the current literal word
+            output_buffer <= decode_lfl_f_compax(word_size, input_buffer);
+            OUT_WR_loc <= '1';
+
+            if (final) then
+                -- mark the end of all output
+                FINAL_OUT <= '1';
+            end if;
+        end procedure;
+
+        procedure handle_LFL_L2 is
+        begin
+            report("LFL_L2");
+            -- prepare to output the current literal word
+            output_buffer <= lfl_buffer;
+            OUT_WR_loc <= '1';
+            state <= W_NONE;
+            buffer_type <= W_NONE;
 
             if (final) then
                 -- mark the end of all output
@@ -185,6 +215,10 @@ begin
                         handle_FLF_F(2);
                     when W_FLF_L =>
                         handle_FLF_F(1);
+                    when W_LFL =>
+                        handle_LFL_F;
+                    when W_LFL_F =>
+                        handle_LFL_L2;
                     when others =>
                 end case;
             end if;

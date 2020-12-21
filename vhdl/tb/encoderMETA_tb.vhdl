@@ -29,7 +29,7 @@ architecture behav of encoderMETA_tb is
     component encoder
         Generic (
                     constant word_size: natural := general_word_size;
-                    constant fill_counter_size: natural := 32
+                    constant fill_counter_size: natural := general_word_size
                 );
         Port (
                  clk:           in std_logic;
@@ -48,7 +48,7 @@ architecture behav of encoderMETA_tb is
     component encoderMETA
         Generic (
                     constant word_size: natural := general_word_size;
-                    constant fill_counter_size: natural := 32
+                    constant fill_counter_size: natural := general_word_size
                 );
         Port (
                  clk:           in std_logic;
