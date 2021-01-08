@@ -30,7 +30,6 @@ architecture IMP of decoderMeta is
     signal output_fill_length:  unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal input_buffer:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal output_buffer:       std_logic_vector(word_size-1 downto 0) := (others => 'U');
-    signal next_word_buffer:    std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:     std_logic := '0';
     signal running:             std_logic := '1';
     signal final:               boolean := false;
@@ -40,7 +39,6 @@ architecture IMP of decoderMeta is
     signal state:               CompaxWord := W_NONE;
     signal lfl_buffer:          std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal flf_buffer:          std_logic_vector(word_size-1 downto 0) := (others => 'U');
-    signal next_type:           CompaxWord := W_NONE;
 
 begin
     process (CLK)
