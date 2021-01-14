@@ -119,9 +119,9 @@ architecture behav of encoderMETA_tb is
     end component;
 
     --  Specifies which entity is bound with the component.
-    for encoder_0: encoder use entity work.encoder;
+    --for encoder_0: encoder use entity work.encoder;
     for encoderMETA_0: encoderMETA use entity work.encoderMETA;
-    for input_fifo_0: input_fifo use entity work.FIFO_bb;
+    --for input_fifo_0: input_fifo use entity work.FIFO_bb;
     for mid_fifo_0: mid_fifo use entity work.FIFO_bb;
     for output_fifo_0: output_fifo use entity work.FIFO_bb;
 
@@ -145,7 +145,7 @@ architecture behav of encoderMETA_tb is
 
     -- outer signals
     signal outer_clk:      std_logic;
-    signal outer_input:    std_logic_vector(general_word_size-2 downto 0);
+    signal outer_input:    std_logic_vector(general_word_size-1 downto 0);
     signal outer_wr_en:    std_logic;
     signal outer_rd_en:    std_logic;
     signal outer_output:   std_logic_vector(general_word_size-1 downto 0);
@@ -160,7 +160,7 @@ architecture behav of encoderMETA_tb is
 
     begin
         --  Component instantiation.
-        encoder_0: encoder
+        /*encoder_0: encoder
         port map (clk => outer_clk,
                   blk_in => blk_in,
                   blk_out => blk_out,
@@ -170,7 +170,7 @@ architecture behav of encoderMETA_tb is
                   final_in => final_in,
                   final_out => final_out,
                   reset => outer_reset,
-                  out_wr => out_wr);
+                  out_wr => out_wr);*/
 
         encoderMETA_0: encoderMETA
         port map (clk => outer_clk,
@@ -184,7 +184,7 @@ architecture behav of encoderMETA_tb is
                 reset => outer_reset,
                 out_wr => out_wr_meta);
 
-        input_fifo_0: input_fifo
+        /*input_fifo_0: input_fifo
         port map (CLK => outer_clk,
                   BLK_IN => outer_input,
                   WR_EN => outer_wr_en,
@@ -206,7 +206,19 @@ architecture behav of encoderMETA_tb is
                 FINAL_IN => final_out,
                 FINAL_OUT => final_in_meta,
                 RESET => outer_reset,
-                FULL => out_full);
+                FULL => out_full);*/
+
+        mid_fifo_0: mid_fifo
+        port map (CLK => outer_clk,
+                BLK_IN => outer_input,
+                WR_EN => outer_wr_en,
+                BLK_OUT => blk_in_meta,
+                RD_EN => in_rd_meta,
+                EMPTY => in_empty_meta,
+                FINAL_IN => outer_final_in,
+                FINAL_OUT => final_in_meta,
+                RESET => outer_reset,
+                FULL => outer_full);
 
         output_fifo_0: output_fifo
         port map (CLK => outer_clk,
@@ -226,7 +238,7 @@ architecture behav of encoderMETA_tb is
             variable read_col_from_output_buf: line;
 
             variable input_final:  std_logic;
-            variable input_word:   std_logic_vector(general_word_size-2 downto 0);
+            variable input_word:   std_logic_vector(general_word_size-1 downto 0);
 
             variable space: character;
             variable available: boolean;

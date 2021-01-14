@@ -234,7 +234,7 @@ begin
         -- falling clock signal
         -- reads inputs, steps buffer pipeline forward and determines future read state
         if (CLK'event and CLK='0') then
-            if (state = W_FLF or state = W_FLF_L) then
+            if (state = W_FLF or state = W_FLF_L or state = W_LFL_F) then
                 IN_RD_loc <= '0';
             else
                 IN_RD_loc <= '1';

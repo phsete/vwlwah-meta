@@ -36,7 +36,7 @@ architecture behav of decoderMETA_tb is
                  blk_in:        in std_logic_vector(word_size-1 downto 0);
                  in_empty:      in std_logic;
                  out_full:      in std_logic;
-                 blk_out:       out std_logic_vector(word_size-2 downto 0);
+                 blk_out:       out std_logic_vector(word_size-1 downto 0);
                  in_rd:         out std_logic;
                  out_wr:        out std_logic;
                  final_in:      in std_logic;
@@ -103,7 +103,7 @@ architecture behav of decoderMETA_tb is
     component output_fifo
         Generic (
                     constant addr_width: natural := 3;
-                    constant word_size: natural := general_word_size-1
+                    constant word_size: natural := general_word_size
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
                WR_EN    : in  STD_LOGIC;
@@ -119,7 +119,7 @@ architecture behav of decoderMETA_tb is
     end component;
 
     --  Specifies which entity is bound with the component.
-    for decoder_0: decoder use entity work.decoder;
+    for decoder_0: decoder use entity work.encoderMETA;
     for decoderMETA_0: decoderMETA use entity work.decoderMETA;
     for input_fifo_0: input_fifo use entity work.FIFO_bb;
     for mid_fifo_0: mid_fifo use entity work.FIFO_bb;
@@ -127,7 +127,7 @@ architecture behav of decoderMETA_tb is
 
     -- inner signals
     signal blk_in:          std_logic_vector(general_word_size-1 downto 0);
-    signal blk_out:         std_logic_vector(general_word_size-2 downto 0);
+    signal blk_out:         std_logic_vector(general_word_size-1 downto 0);
     signal blk_in_meta:     std_logic_vector(general_word_size-1 downto 0);
     signal blk_out_meta:    std_logic_vector(general_word_size-1 downto 0);
     signal in_empty:        std_logic;
@@ -148,7 +148,7 @@ architecture behav of decoderMETA_tb is
     signal outer_input:    std_logic_vector(general_word_size-1 downto 0);
     signal outer_wr_en:    std_logic;
     signal outer_rd_en:    std_logic;
-    signal outer_output:   std_logic_vector(general_word_size-2 downto 0);
+    signal outer_output:   std_logic_vector(general_word_size-1 downto 0);
     signal outer_empty:    std_logic;
     signal outer_full:     std_logic;
     signal outer_final_in: std_logic;
