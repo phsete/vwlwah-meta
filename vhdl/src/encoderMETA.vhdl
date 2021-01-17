@@ -97,10 +97,10 @@ begin
         procedure output_1Fill is
         begin
             report("output 1-Fill");
-            -- write by default, set to '0' otherwise
-            out_wr_loc <= '1';
             -- output of 1 fill (as Literal)
             output_buffer <= (word_size-1 downto 0 => '1');
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
 
             if (one_fill_length > 1) then
                 -- the fill continues
@@ -116,10 +116,10 @@ begin
         procedure output_0Fill is
         begin
             report("output 0-Fill");
-            -- write by default, set to '0' otherwise
-            out_wr_loc <= '1';
             -- output of 0 fill
             output_buffer <= encode_fill_compax(word_size, fill_counter_size, zero_fill_length);
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             -- TODO: extended Fill (fill-length verringern und checken ob > 0!)
 
             buffer_type <= W_NONE;
@@ -128,10 +128,10 @@ begin
         procedure output_Literal is
         begin
             report("output Literal");
-            -- write by default, set to '0' otherwise
-            out_wr_loc <= '1';
             -- output of Literal
             output_buffer <= encode_literal_compax(word_size, literal_buffer);
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             if(not is_all(snd_literal_buffer, 'U')) then
                 literal_buffer <= snd_literal_buffer;
                 snd_literal_buffer <= (others => 'U');
@@ -145,10 +145,10 @@ begin
         procedure output_FLF is
         begin
             report("output FLF");
-            -- write by default, set to '0' otherwise
-            out_wr_loc <= '1';
             -- output of FLF
             output_buffer <= encode_flf_main(word_size, literal_buffer);
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             literal_buffer <= (others => 'U');
 
             buffer_type <= W_OFF;
@@ -156,8 +156,6 @@ begin
 
         procedure output_FF is
         begin
-            -- write by default, set to '0' otherwise
-            out_wr_loc <= '1';
             -- output of FLF
             if(buffer_type = W_OFF or buffer_type = W_OF) then
                 report("output fill of flf/lfl");
@@ -172,15 +170,17 @@ begin
                 output_buffer <= encode_flf_fill(word_size, flf_zero_fill_length);
                 buffer_type <= W_NONE;
             end if;
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
         end procedure;
 
         procedure output_LFL is
         begin
             report("output LFL");
-            -- write by default, set to '0' otherwise
-            out_wr_loc <= '1';
             -- output of LFL
             output_buffer <= encode_lfl(word_size, literal_buffer, lfl_literal_buffer);
+            -- write by default, set to '0' otherwise
+            out_wr_loc <= '1';
             literal_buffer <= (others => 'U');
             lfl_literal_buffer <= (others => 'U');
 
