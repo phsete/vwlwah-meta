@@ -80,6 +80,7 @@ begin
                 output_buffer           <= (others => 'U');
                 input_available         <= '0';
                 out_wr_loc              <= '0';
+                out_wr_loc_buffer       <= '0';
                 running                 <= '1';
                 fill_words_left         <= 0;
                 final                   <= false;
