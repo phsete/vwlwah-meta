@@ -50,6 +50,7 @@ architecture IMP of encoderMETA is
     signal output_buffer:           std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:         std_logic := '0';
     signal out_wr_loc:              std_logic := '0';
+    signal out_wr_loc_buffer:       std_logic := '0';
     signal running:                 std_logic := '1';
     signal fill_words_left:         natural := 0;
     signal final:                   boolean := false;
@@ -338,6 +339,8 @@ begin
             -- probably wrong position of final check
             check_final;
 
+            out_wr_loc_buffer <= out_wr_loc;
+
             if(buffer_type /= W_NONE) then
                 --previous_buffer_type <= buffer_type;
             end if;
@@ -368,6 +371,6 @@ begin
     end process;
 
     IN_RD  <= '1' when buffer_type = W_NONE else '0';
-    OUT_WR <= out_wr_loc;
+    OUT_WR <= out_wr_loc_buffer;
 
 end IMP;
