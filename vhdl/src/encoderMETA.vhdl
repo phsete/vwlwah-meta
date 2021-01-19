@@ -89,7 +89,7 @@ begin
 
         procedure check_final is
         begin
-            if (final/* and state = W_NONE and buffer_type = W_NONE*/) then
+            if (final) then
                 FINAL_OUT <= '1';
                 report("final");
             end if;
