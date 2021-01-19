@@ -50,7 +50,6 @@ architecture IMP of encoderMETA is
     signal output_buffer:           std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:         std_logic := '0';
     signal out_wr_loc:              std_logic := '0';
-    signal out_wr_loc_buffer:       std_logic := '0';
     signal running:                 std_logic := '1';
     signal fill_words_left:         natural := 0;
     signal final:                   boolean := false;
@@ -80,7 +79,6 @@ begin
                 output_buffer           <= (others => 'U');
                 input_available         <= '0';
                 out_wr_loc              <= '0';
-                out_wr_loc_buffer       <= '0';
                 running                 <= '1';
                 fill_words_left         <= 0;
                 final                   <= false;
@@ -91,8 +89,9 @@ begin
 
         procedure check_final is
         begin
-            if (final and state = W_NONE and buffer_type = W_NONE) then
+            if (final/* and state = W_NONE and buffer_type = W_NONE*/) then
                 FINAL_OUT <= '1';
+                report("final");
             end if;
         end procedure;
  
@@ -112,6 +111,7 @@ begin
                 -- reset counters and buffer type to read next word
                 buffer_type <= W_NONE;
                 one_fill_length <= to_unsigned(0, fill_counter_size);
+                --check_final;
             end if;
         end procedure;
 
@@ -125,6 +125,7 @@ begin
             -- TODO: extended Fill (fill-length verringern und checken ob > 0!)
 
             buffer_type <= W_NONE;
+            --check_final;
         end procedure;
 
         procedure output_Literal is
@@ -142,6 +143,7 @@ begin
             end if;
 
             buffer_type <= W_NONE;
+            --check_final;
         end procedure;
 
         procedure output_FLF is
@@ -166,11 +168,13 @@ begin
                     buffer_type <= W_OFF2;
                 else
                     buffer_type <= W_NONE;
+                    check_final;
                 end if;
             else
                 report("output fill of flf");
                 output_buffer <= encode_flf_fill(word_size, flf_zero_fill_length);
                 buffer_type <= W_NONE;
+                check_final;
             end if;
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
@@ -292,6 +296,7 @@ begin
                     --out_wr_loc <= '0';
                 end if;
                 state <= W_NONE;
+                check_final;
             end if;
         end procedure;
 
@@ -337,11 +342,6 @@ begin
         -- falling edge
         --
         if (CLK'event and CLK='0') then
-            -- probably wrong position of final check
-            check_final;
-
-            out_wr_loc_buffer <= out_wr_loc;
-
             if(buffer_type /= W_NONE) then
                 --previous_buffer_type <= buffer_type;
             end if;
@@ -372,6 +372,6 @@ begin
     end process;
 
     IN_RD  <= '1' when buffer_type = W_NONE else '0';
-    OUT_WR <= out_wr_loc_buffer;
+    OUT_WR <= out_wr_loc;
 
 end IMP;
