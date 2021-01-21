@@ -217,12 +217,13 @@ begin
                             state <= W_LF;
                             zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                         elsif(state = W_LF) then -- output previous Literal and 0-Fill and set new fill length
-                            --output_Literal;
+                            output_Literal;
                             buffer_type <= W_0FILL; -- outputs 0-Fill next clock cycle
                             zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
                         elsif(state = W_NCLITERAL) then
                             output_Literal;
+                            zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
                         end if;
                     when W_1FILL =>
