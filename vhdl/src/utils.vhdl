@@ -586,13 +586,14 @@ package body utils is
         dirty_quarter := get_dirty_quarter(word_size, literal_buffer);
         dirty_quarter_snd := get_dirty_quarter(word_size, lfl_literal_buffer);
 
-        num_ununsed := ceiled_quarter*2-7-(ceiled_quarter*4-word_size);
+        -- probably wrong!
+        num_ununsed := (word_size/4)*2-7-((word_size/4)*4-word_size);
 
         buf(word_size-1 downto word_size-3) := "001";
         buf(word_size-4 downto word_size-5) := std_logic_vector(to_unsigned(dirty_quarter-1, 2));
         buf(word_size-6 downto word_size-7) := std_logic_vector(to_unsigned(dirty_quarter_snd-1, 2));
 
-        if(num_ununsed > 7) then
+        if(num_ununsed > 0) then
             buf(word_size-8 downto word_size-num_ununsed-7) := (others => '0');
         end if;
 

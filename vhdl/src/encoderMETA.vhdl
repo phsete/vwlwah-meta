@@ -267,16 +267,22 @@ begin
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 output_Literal;
                                 buffer_type <= W_0FILL;
+                                literal_buffer <= input_buffer(word_size-2 downto 0);
                                 state <= W_NCLITERAL;
-                                snd_literal_buffer <= input_buffer(word_size-2 downto 0);
                             else
                                 state <= W_NONE;
                                 lfl_literal_buffer <= input_buffer(word_size-2 downto 0);
                                 buffer_type <= W_LFL;
                             end if;
                         elsif(state = W_NCLITERAL) then
+                            if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
+                                state <= W_NCLITERAL;
+                            else
+                                state <= W_LITERAL;
+                            end if;
                             output_Literal;
-                            state <= W_NONE;
+                            buffer_type <= W_NONE;
+                            literal_buffer <= input_buffer(word_size-2 downto 0);
                         end if;
                     when others =>
                         report("Error while handling next block type!");
