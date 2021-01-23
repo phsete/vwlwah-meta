@@ -1,61 +1,64 @@
 v 4
-file "/workspaces/vwlwah-meta/vhdl/" "tb/encoder_big.vhdl" "bfa93d20a69c53e92dc20cb393197c55fb52ef23" "20210119202928.791":
-  entity encoder_big at 2( 99) + 0 on 249;
-  architecture behav of encoder_big at 12( 304) + 0 on 250;
-file "/workspaces/vwlwah-meta/vhdl/" "tb/encoder_tb.vhdl" "06a3146de977038b560c1bc5fa9adbd9f2e52f98" "20210119202027.959":
-  entity encoder_tb at 2( 99) + 0 on 225;
-  architecture behav of encoder_tb at 10( 249) + 0 on 226;
-file "/workspaces/vwlwah-meta/vhdl/" "src/decoder.vhdl" "4e15fc710d0917107de63fa072462449598036ae" "20210121202610.877":
-  entity decoder at 1( 0) + 0 on 4;
-  architecture imp of decoder at 27( 816) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/decoderMeta.vhdl" "d3eb5f46aa6d5df5279948ee076a760896363c20" "20210123171041.209":
+  entity decodermeta at 1( 0) + 0 on 4;
+  architecture imp of decodermeta at 27( 824) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/sizeup.vhdl" "37900faddad1359b8dd7b1d7c699e6d201d9ca9d" "20210123171041.235":
+  entity sizeup at 1( 0) + 0 on 4;
+  architecture imp of sizeup at 27( 1007) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/sizedown.vhdl" "74fb95d3490996a48bf0a6f37c5d298462006963" "20210123171041.231":
+  entity sizedown at 1( 0) + 0 on 4;
+  architecture imp of sizedown at 28( 1020) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/FIFO2AXIS_v1_0_M00_AXIS.vhdl" "d57cdb9d76dd2595068b265bc8928d8372e617ef" "20210123171041.227":
+  entity fifo2axis_v1_0_m00_axis at 2( 46) + 0 on 4;
+  architecture implementation of fifo2axis_v1_0_m00_axis at 30( 1124) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/FIFO2AXIS_v1_0.vhdl" "032b57106f8fc2b8fcf7655a85f522e26a0f14d2" "20210123171041.221":
+  entity fifo2axis_v1_0 at 2( 46) + 0 on 4;
+  architecture arch_imp of fifo2axis_v1_0 at 40( 1381) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/AXIS2FIFO_v1_0_S00_AXIS.vhdl" "5494696c1636c3abedde2d96cde19a3e12825b6d" "20210123171041.219":
+  entity axis2fifo_v1_0_s00_axis at 2( 46) + 0 on 4;
+  architecture arch_imp of axis2fifo_v1_0_s00_axis at 35( 1246) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/AXIS2FIFO_v1_0.vhdl" "53a3eed9795a6015d2450c0f93cbeb62b9104c38" "20210123171041.216":
+  entity axis2fifo_v1_0 at 2( 46) + 0 on 4;
+  architecture arch_imp of axis2fifo_v1_0 at 29( 982) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/logic_or.vhdl" "e2277355c180ac45739a04c68e533555e46b6efa" "20210123171041.213":
+  entity logic_or at 1( 0) + 0 on 4;
+  architecture imp of logic_or at 28( 1041) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/encoderMETA.vhdl" "fc4422a16cd856448385e0796200f8493240ee65" "20210123171041.199":
+  entity encodermeta at 1( 0) + 0 on 4;
+  architecture imp of encodermeta at 27( 824) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/encoder.vhdl" "66df6cba68f5df4bb60a869b6715be9d78edc138" "20210123171041.195":
+  entity encoder at 1( 0) + 0 on 4;
+  architecture imp of encoder at 27( 816) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/inverter.vhdl" "ce05e9a1f6e0b5feaa77c16debc9c00eb9a90ff4" "20210123171041.191":
+  entity inverter at 1( 0) + 0 on 4;
+  architecture imp of inverter at 27( 818) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/fifo_b32.vhdl" "f6edd0456c1c2c14a4798e3bf9e6370260c73ec4" "20210123171041.188":
+  entity fifo_b32 at 2( 71) + 0 on 4;
+  architecture imp of fifo_b32 at 26( 896) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/fifo_32b.vhdl" "67414b458ae7c0d3412763bfc9979d46baf48390" "20210123171041.184":
+  entity fifo_32b at 2( 71) + 0 on 4;
+  architecture imp of fifo_32b at 26( 896) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/fifo_bb.vhdl" "484761a44060d11a7686d30d33e43289ffbf9dc1" "20210123171041.505":
+  entity fifo_bb at 2( 65) + 0 on 255;
+  architecture imp of fifo_bb at 26( 897) + 0 on 256;
+file "/workspaces/vwlwah-meta/vhdl/" "src/utils.vhdl" "51f971986de1ce6ce44bd07ebaf119eebd1bcb38" "20210123171041.505":
+  package utils at 1( 0) + 0 on 251 body;
+  package body utils at 169( 4745) + 0 on 252;
 file "/workspaces/vwlwah-meta/vhdl/" "tb/decoderMETA_tb.vhdl" "729fc7c5f208512606430c18861381d31dff9efe" "20210109192345.782":
   entity decodermeta_tb at 2( 99) + 0 on 129;
   architecture behav of decodermeta_tb at 12( 310) + 0 on 130;
-file "/workspaces/vwlwah-meta/vhdl/" "tb/encoderMETA_tb.vhdl" "79a0c4fc6fe1c035275adfefb7463d45ac52f79b" "20210121202611.099":
-  entity encodermeta_tb at 2( 99) + 0 on 257;
-  architecture behav of encodermeta_tb at 12( 310) + 0 on 258;
-file "/workspaces/vwlwah-meta/vhdl/" "src/utils.vhdl" "06f2dc64ca51c75a3977524b5b8a4bebf88554e3" "20210121202611.099":
-  package utils at 1( 0) + 0 on 251 body;
-  package body utils at 159( 4435) + 0 on 252;
-file "/workspaces/vwlwah-meta/vhdl/" "src/fifo_bb.vhdl" "484761a44060d11a7686d30d33e43289ffbf9dc1" "20210121202611.099":
-  entity fifo_bb at 2( 65) + 0 on 255;
-  architecture imp of fifo_bb at 26( 897) + 0 on 256;
-file "/workspaces/vwlwah-meta/vhdl/" "src/fifo_32b.vhdl" "67414b458ae7c0d3412763bfc9979d46baf48390" "20210121202610.864":
-  entity fifo_32b at 2( 71) + 0 on 4;
-  architecture imp of fifo_32b at 26( 896) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/fifo_b32.vhdl" "f6edd0456c1c2c14a4798e3bf9e6370260c73ec4" "20210121202610.867":
-  entity fifo_b32 at 2( 71) + 0 on 4;
-  architecture imp of fifo_b32 at 26( 896) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/inverter.vhdl" "ce05e9a1f6e0b5feaa77c16debc9c00eb9a90ff4" "20210121202610.870":
-  entity inverter at 1( 0) + 0 on 4;
-  architecture imp of inverter at 27( 818) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/encoder.vhdl" "66df6cba68f5df4bb60a869b6715be9d78edc138" "20210121202610.872":
-  entity encoder at 1( 0) + 0 on 4;
-  architecture imp of encoder at 27( 816) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/encoderMETA.vhdl" "c39aeaefed4c556056d0d0a9e224a7ef9da6e632" "20210121202611.099":
-  entity encodermeta at 1( 0) + 0 on 253;
-  architecture imp of encodermeta at 27( 824) + 0 on 254;
-file "/workspaces/vwlwah-meta/vhdl/" "src/logic_or.vhdl" "e2277355c180ac45739a04c68e533555e46b6efa" "20210121202610.883":
-  entity logic_or at 1( 0) + 0 on 4;
-  architecture imp of logic_or at 28( 1041) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/AXIS2FIFO_v1_0.vhdl" "53a3eed9795a6015d2450c0f93cbeb62b9104c38" "20210121202610.886":
-  entity axis2fifo_v1_0 at 2( 46) + 0 on 4;
-  architecture arch_imp of axis2fifo_v1_0 at 29( 982) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/AXIS2FIFO_v1_0_S00_AXIS.vhdl" "5494696c1636c3abedde2d96cde19a3e12825b6d" "20210121202610.888":
-  entity axis2fifo_v1_0_s00_axis at 2( 46) + 0 on 4;
-  architecture arch_imp of axis2fifo_v1_0_s00_axis at 35( 1246) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/FIFO2AXIS_v1_0.vhdl" "032b57106f8fc2b8fcf7655a85f522e26a0f14d2" "20210121202610.890":
-  entity fifo2axis_v1_0 at 2( 46) + 0 on 4;
-  architecture arch_imp of fifo2axis_v1_0 at 40( 1381) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/FIFO2AXIS_v1_0_M00_AXIS.vhdl" "d57cdb9d76dd2595068b265bc8928d8372e617ef" "20210121202610.893":
-  entity fifo2axis_v1_0_m00_axis at 2( 46) + 0 on 4;
-  architecture implementation of fifo2axis_v1_0_m00_axis at 30( 1124) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/sizedown.vhdl" "74fb95d3490996a48bf0a6f37c5d298462006963" "20210121202610.895":
-  entity sizedown at 1( 0) + 0 on 4;
-  architecture imp of sizedown at 28( 1020) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/sizeup.vhdl" "37900faddad1359b8dd7b1d7c699e6d201d9ca9d" "20210121202610.899":
-  entity sizeup at 1( 0) + 0 on 4;
-  architecture imp of sizeup at 27( 1007) + 0 on 4;
-file "/workspaces/vwlwah-meta/vhdl/" "src/decoderMeta.vhdl" "d3eb5f46aa6d5df5279948ee076a760896363c20" "20210121202610.880":
-  entity decodermeta at 1( 0) + 0 on 4;
-  architecture imp of decodermeta at 27( 824) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "src/decoder.vhdl" "4e15fc710d0917107de63fa072462449598036ae" "20210123171041.206":
+  entity decoder at 1( 0) + 0 on 4;
+  architecture imp of decoder at 27( 816) + 0 on 4;
+file "/workspaces/vwlwah-meta/vhdl/" "tb/encoder_tb.vhdl" "06a3146de977038b560c1bc5fa9adbd9f2e52f98" "20210119202027.959":
+  entity encoder_tb at 2( 99) + 0 on 225;
+  architecture behav of encoder_tb at 10( 249) + 0 on 226;
+file "/workspaces/vwlwah-meta/vhdl/" "tb/encoder_big.vhdl" "bfa93d20a69c53e92dc20cb393197c55fb52ef23" "20210119202928.791":
+  entity encoder_big at 2( 99) + 0 on 249;
+  architecture behav of encoder_big at 12( 304) + 0 on 250;
+file "/workspaces/vwlwah-meta/vhdl/" "tb/encoderVWLCOM_tb.vhdl" "597937ee4443b6dab6003466313205197452ba79" "20210123171041.505":
+  entity encodervwlcom_tb at 2( 99) + 0 on 257;
+  architecture behav of encodervwlcom_tb at 12( 314) + 0 on 258;
+file "/workspaces/vwlwah-meta/vhdl/" "src/encoderVWLCOM.vhdl" "c515889ea8b9317e38e6091c70affdc8185a17d4" "20210123171041.505":
+  entity encodervwlcom at 1( 0) + 0 on 253;
+  architecture imp of encodervwlcom at 27( 828) + 0 on 254;

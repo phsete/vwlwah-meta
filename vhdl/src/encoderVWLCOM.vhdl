@@ -5,7 +5,7 @@ use ieee.math_real.log2;
 use ieee.math_real.ceil;
 use work.utils.all;
 
-entity encoderMETA is
+entity encoderVWLCOM is
     Generic (
         word_size:              natural := 5;
         fill_counter_size:      natural := 32
@@ -22,9 +22,9 @@ entity encoderMETA is
         IN_RD:              out std_logic;
         FINAL_OUT:          out std_logic
     );
-end encoderMETA;
+end encoderVWLCOM;
 
-architecture IMP of encoderMETA is
+architecture IMP of encoderVWLCOM is
 
     -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
     function to_string ( a: std_logic_vector) return string is
@@ -184,13 +184,14 @@ begin
         begin
             report("output LFL");
             -- output of LFL
-            output_buffer <= encode_lfl(word_size, literal_buffer, lfl_literal_buffer);
+            output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, lfl_literal_buffer, zero_fill_length);
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
             literal_buffer <= (others => 'U');
             lfl_literal_buffer <= (others => 'U');
 
-            buffer_type <= W_OF;
+            buffer_type <= W_NONE; -- possible e.F. missing
+            check_final;
         end procedure;
 
         --

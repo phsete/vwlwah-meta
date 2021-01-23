@@ -14,6 +14,10 @@ package utils is
     input_word: std_logic_vector)
     return natural;
 
+    function get_dirty_eighth (word_size: natural;
+    input_word: std_logic_vector)
+    return natural;
+
     function is_compressable (word_size: natural;
     input_word: std_logic_vector)
     return boolean;
@@ -129,6 +133,12 @@ package utils is
     lfl_literal_buffer: std_logic_vector)
     return std_logic_vector;
 
+    function encode_lfl_vwlcom (word_size: natural;
+    literal_buffer: std_logic_vector;
+    lfl_literal_buffer: std_logic_vector;
+    zero_fill_length: unsigned)
+    return std_logic_vector;
+
     function fill_words_needed (word_size: natural;
     fill_counter_size: natural;
     length: unsigned)
@@ -191,6 +201,33 @@ package body utils is
                 return 0;
             end if;
         end if;
+    end function;
+
+    function get_dirty_eighth (word_size: natural; input_word: std_logic_vector) return natural is
+        variable input_word_headless: std_logic_vector(word_size-2 downto 0);
+        variable dirty_eighth: natural;
+        variable ceiled_eighth: natural;
+        variable one: unsigned((word_size/8+1)*8 downto 0);
+    begin
+        one := (others => '0');
+        one(0) := '1';
+        dirty_eighth := 0;
+        input_word_headless := input_word(word_size-2 downto 0);
+
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+
+        for i in 8 downto 1 loop
+            if(unsigned(input_word_headless) < shift_left(one, i*ceiled_eighth)) then
+                dirty_eighth := i;
+            else
+                return dirty_eighth;
+            end if;
+        end loop;
+
+        return dirty_eighth;
     end function;
 
     function is_compressable (word_size: natural; input_word: std_logic_vector) return boolean is
@@ -613,6 +650,51 @@ package body utils is
 
         return buf;
     end encode_lfl;
+
+    --
+    -- returns an encoded lfl word
+    --
+    function encode_lfl_vwlcom (word_size: natural;
+    literal_buffer: std_logic_vector;
+    lfl_literal_buffer: std_logic_vector;
+    zero_fill_length: unsigned)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable extended_literal_buffer: std_logic_vector((word_size/8+1)*8 downto 0);
+        variable extended_lfl_literal_buffer: std_logic_vector((word_size/8+1)*8 downto 0);
+        variable num_ununsed: natural;
+        variable dirty_eighth: natural;
+        variable dirty_eighth_snd: natural;
+        variable ceiled_eighth: natural;
+    begin
+        extended_literal_buffer := (others => '0');
+        extended_lfl_literal_buffer := (others => '0');
+        extended_literal_buffer(word_size-2 downto 0) := literal_buffer(word_size-2 downto 0);
+        extended_lfl_literal_buffer(word_size-2 downto 0) := lfl_literal_buffer(word_size-2 downto 0);
+
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+
+        dirty_eighth := get_dirty_eighth(word_size, literal_buffer);
+        dirty_eighth_snd := get_dirty_eighth(word_size, lfl_literal_buffer);
+
+        buf(word_size-1 downto word_size-3) := "001";
+        buf(word_size-4 downto word_size-6) := std_logic_vector(to_unsigned(dirty_eighth-1, 3));
+        buf(word_size-7 downto word_size-9) := std_logic_vector(to_unsigned(dirty_eighth_snd-1, 3));
+
+        buf(word_size-10) := '0';
+
+        buf(word_size-11 downto word_size-10-ceiled_eighth) := extended_literal_buffer(dirty_eighth*ceiled_eighth-1 downto dirty_eighth*ceiled_eighth-ceiled_eighth);
+
+        buf(word_size-11-ceiled_eighth downto word_size-10-2*ceiled_eighth) := extended_lfl_literal_buffer(dirty_eighth_snd*ceiled_eighth-1 downto dirty_eighth_snd*ceiled_eighth-ceiled_eighth);
+
+        -- only for fills with correct length -> longer fills should continue in next word
+        buf(word_size-11-2*ceiled_eighth downto 0) := std_logic_vector(to_unsigned(to_integer(zero_fill_length), word_size-10-2*ceiled_eighth));
+
+        return buf;
+    end encode_lfl_vwlcom;
 
     --
     -- returns an encoded fill word of the given type in compax format.

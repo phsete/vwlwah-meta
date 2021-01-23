@@ -12,6 +12,7 @@ MODULES=\
 	  inverter \
 	  encoder \
 	  encoderMETA \
+	  encoderVWLCOM \
 	  decoder \
 	  decoderMeta \
 	  logic_or \
@@ -23,7 +24,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  encoderMETA_tb
+	  encoderVWLCOM_tb
 
 GHDL_CMD=ghdl
 
