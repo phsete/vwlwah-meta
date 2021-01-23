@@ -136,7 +136,8 @@ package utils is
     function encode_lfl_vwlcom (word_size: natural;
     literal_buffer: std_logic_vector;
     lfl_literal_buffer: std_logic_vector;
-    zero_fill_length: unsigned)
+    zero_fill_length: unsigned;
+    to_long: boolean)
     return std_logic_vector;
 
     function fill_words_needed (word_size: natural;
@@ -657,7 +658,8 @@ package body utils is
     function encode_lfl_vwlcom (word_size: natural;
     literal_buffer: std_logic_vector;
     lfl_literal_buffer: std_logic_vector;
-    zero_fill_length: unsigned)
+    zero_fill_length: unsigned;
+    to_long: boolean)
     return std_logic_vector is
         variable buf: std_logic_vector(word_size-1 downto 0);
         variable extended_literal_buffer: std_logic_vector((word_size/8+1)*8 downto 0);
@@ -684,7 +686,13 @@ package body utils is
         buf(word_size-4 downto word_size-6) := std_logic_vector(to_unsigned(dirty_eighth-1, 3));
         buf(word_size-7 downto word_size-9) := std_logic_vector(to_unsigned(dirty_eighth_snd-1, 3));
 
-        buf(word_size-10) := '0';
+        report("test: " & to_bstring(zero_fill_length));
+
+        if(to_long) then
+            buf(word_size-10) := '1';
+        else
+            buf(word_size-10) := '0';
+        end if;
 
         buf(word_size-11 downto word_size-10-ceiled_eighth) := extended_literal_buffer(dirty_eighth*ceiled_eighth-1 downto dirty_eighth*ceiled_eighth-ceiled_eighth);
 

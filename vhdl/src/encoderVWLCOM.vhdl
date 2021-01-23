@@ -55,6 +55,7 @@ architecture IMP of encoderVWLCOM is
     signal final:                   boolean := false;
     signal buffer_type:             Word_Sequence := W_NONE;
     signal state:                   Word_Sequence := W_NONE;
+    signal ceiled_eighth:           natural := 0;
 
 begin
     process (CLK)
@@ -84,6 +85,7 @@ begin
                 final                   <= false;
                 buffer_type             <= W_NONE;
                 state                   <= W_NONE;
+                ceiled_eighth           <= 0;
             end if;
         end procedure;
 
@@ -181,17 +183,31 @@ begin
         end procedure;
 
         procedure output_LFL is
+            variable overflow: std_logic_vector(2*word_size-11-ceiled_eighth*2 downto 0);
+            variable one_mask: std_logic_vector(word_size-11-ceiled_eighth*2 downto 0);
         begin
             report("output LFL");
-            -- output of LFL
-            output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, lfl_literal_buffer, zero_fill_length);
+
+            if(zero_fill_length < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, word_size-10-ceiled_eighth*2)))) then
+                -- output of LFL
+                output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, lfl_literal_buffer, zero_fill_length, false);
+                buffer_type <= W_NONE;
+                check_final;
+            else
+                -- fill is to long
+                -- output of LFL
+                overflow := (others => '0');
+                overflow(2*word_size-11-ceiled_eighth*2 downto word_size) := (others => '1');
+                overflow := std_logic_vector(overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), 2*word_size-10-ceiled_eighth*2));
+                output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, lfl_literal_buffer, unsigned(overflow(2*word_size-11-ceiled_eighth*2 downto word_size)), true);
+                zero_fill_length <= zero_fill_length(word_size-1 downto 0);
+                buffer_type <= W_OF;
+            end if;
+            
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
             literal_buffer <= (others => 'U');
             lfl_literal_buffer <= (others => 'U');
-
-            buffer_type <= W_NONE; -- possible e.F. missing
-            check_final;
         end procedure;
 
         --
@@ -348,6 +364,11 @@ begin
         end procedure;
 
     begin
+
+        ceiled_eighth <= word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth <= ceiled_eighth + 1;
+        end if;
 
         --
         -- rising edge
