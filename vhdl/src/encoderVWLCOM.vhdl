@@ -56,6 +56,7 @@ architecture IMP of encoderVWLCOM is
     signal buffer_type:             Word_Sequence := W_NONE;
     signal state:                   Word_Sequence := W_NONE;
     signal ceiled_eighth:           natural := 0;
+    signal skip_check_input:        boolean := false;
 
 begin
     process (CLK)
@@ -86,6 +87,7 @@ begin
                 buffer_type             <= W_NONE;
                 state                   <= W_NONE;
                 ceiled_eighth           <= 0;
+                skip_check_input        <= false;
             end if;
         end procedure;
 
@@ -94,6 +96,18 @@ begin
             if (final) then
                 FINAL_OUT <= '1';
                 report("final");
+            end if;
+        end procedure;
+
+        procedure check_input_available is
+        begin
+            if ((buffer_type = W_NONE and IN_EMPTY = '0') or (skip_check_input and IN_EMPTY = '0')) then
+                input_available <= '1';
+            else
+                input_available <= '0';
+            end if;
+            if(buffer_type = W_NONE) then
+                skip_check_input <= false;
             end if;
         end procedure;
  
@@ -121,13 +135,20 @@ begin
         begin
             report("output 0-Fill");
             -- output of 0 fill
-            output_buffer <= encode_fill_compax(word_size, fill_counter_size, zero_fill_length);
+            output_buffer <= encode_fill_vwlcom(word_size, fill_counter_size, zero_fill_length, fill_words_left - 1);
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
-            -- TODO: extended Fill (fill-length verringern und checken ob > 0!)
 
-            buffer_type <= W_NONE;
-            --check_final;
+            if (fill_words_left > 1) then
+                -- the fill continues
+                buffer_type <= W_0FILL;
+                fill_words_left <= fill_words_left - 1;
+            else
+                -- reset counters and buffer type to read next word
+                buffer_type <= W_NONE;
+                zero_fill_length <= to_unsigned(0, fill_counter_size);
+                fill_words_left <= 0;
+            end if;
         end procedure;
 
         procedure output_Literal is
@@ -156,6 +177,7 @@ begin
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
             literal_buffer <= (others => 'U');
+            skip_check_input <= true;
 
             buffer_type <= W_OFF;
         end procedure;
@@ -168,6 +190,7 @@ begin
                 output_buffer <= encode_flf_fill(word_size, zero_fill_length);
                 if(buffer_type = W_OFF) then
                     buffer_type <= W_OFF2;
+                    skip_check_input <= true;
                 else
                     buffer_type <= W_NONE;
                     check_final;
@@ -184,7 +207,6 @@ begin
 
         procedure output_LFL is
             variable overflow: std_logic_vector(2*word_size-11-ceiled_eighth*2 downto 0);
-            variable one_mask: std_logic_vector(word_size-11-ceiled_eighth*2 downto 0);
         begin
             report("output LFL");
 
@@ -202,6 +224,7 @@ begin
                 output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, lfl_literal_buffer, unsigned(overflow(2*word_size-11-ceiled_eighth*2 downto word_size)), true);
                 zero_fill_length <= zero_fill_length(word_size-1 downto 0);
                 buffer_type <= W_OF;
+                skip_check_input <= true;
             end if;
             
             -- write by default, set to '0' otherwise
@@ -214,37 +237,46 @@ begin
         -- looks at the input buffer and calls the appropriate procedure
         --
         procedure handle_next_block is
+            variable left_temp: unsigned(fill_counter_size-1 downto 0);
         begin
             if (input_available = '1') then
+                report("check");
                 -- ready to read input value
                 case parse_vwlwah_block_type(word_size, input_buffer) is
                     when W_0FILL =>
                         report("detected 0-Fill");
                         if(state = W_NONE) then -- set new fill length
                             state <= W_0FILL;
-                            zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
+                            zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
+                            fill_words_left <= 1;
                         elsif(state = W_0FILL) then -- output previous 0-Fill and set new fill length
-                            output_0Fill;
-                            zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
+                            left_temp := zero_fill_length;
+                            left_temp := shift_left(left_temp, word_size-2);
+                            left_temp(word_size-3 downto 0) := unsigned(input_buffer(word_size-3 downto 0));
+                            fill_words_left <= fill_words_needed(word_size, fill_counter_size, left_temp);
+                            zero_fill_length <= left_temp;
                         elsif(state = W_FL) then -- set second fill length and output flf (reset fill lengths?)
-                            flf_zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
+                            flf_zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             state <= W_NONE;
                             output_FLF;
                         elsif(state = W_LITERAL) then -- set new fill length
                             state <= W_LF;
-                            zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
+                            zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                         elsif(state = W_LF) then -- output previous Literal and 0-Fill and set new fill length
                             output_Literal;
-                            buffer_type <= W_0FILL; -- outputs 0-Fill next clock cycle
-                            zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
+                            left_temp := zero_fill_length;
+                            left_temp := shift_left(left_temp, word_size-2);
+                            left_temp(word_size-3 downto 0) := unsigned(input_buffer(word_size-3 downto 0));
+                            fill_words_left <= fill_words_needed(word_size, fill_counter_size, left_temp);
+                            zero_fill_length <= left_temp;
                             state <= W_0FILL;
                         elsif(state = W_NCLITERAL) then
                             output_Literal;
-                            zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
+                            zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
                         elsif(state = W_1FILL) then
                             output_1Fill;
-                            zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
+                            zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
                         end if;
                     when W_1FILL =>
@@ -398,11 +430,7 @@ begin
                     when others =>
                 end case;
 
-                if (buffer_type = W_NONE and IN_EMPTY = '0') then
-                    input_available <= '1';
-                else
-                    input_available <= '0';
-                end if;
+                check_input_available;
             end if;
         end if;
 

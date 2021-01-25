@@ -26,24 +26,6 @@ architecture behav of encoderMETA_tb is
     end function;
 
     -- Declaration of the components that will be instantiated.
-    component encoder
-        Generic (
-                    constant word_size: natural := general_word_size;
-                    constant fill_counter_size: natural := general_word_size
-                );
-        Port (
-                 clk:           in std_logic;
-                 blk_in:        in std_logic_vector(word_size-2 downto 0);
-                 in_empty:      in std_logic;
-                 out_full:      in std_logic;
-                 blk_out:       out std_logic_vector(word_size-1 downto 0);
-                 in_rd:         out std_logic;
-                 out_wr:        out std_logic;
-                 final_in:      in std_logic;
-                 final_out:     out std_logic;
-                 reset:         in std_logic
-             );
-    end component;
 
     component encoderMETA
         Generic (
@@ -62,24 +44,6 @@ architecture behav of encoderMETA_tb is
                  final_out:     out std_logic;
                  reset:         in std_logic
              );
-    end component;
-
-    component input_fifo
-        Generic (
-                    constant addr_width: natural := 3;
-                    constant word_size: natural := general_word_size-1
-                );
-        Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
-               WR_EN    : in  STD_LOGIC;
-               BLK_OUT  : out STD_LOGIC_VECTOR (word_size-1 downto 0);
-               RD_EN    : in  STD_LOGIC;
-               EMPTY : out STD_LOGIC;
-               FULL  : out STD_LOGIC;
-               CLK   : in  STD_LOGIC;
-               FINAL_IN: in std_logic;
-               FINAL_OUT: out std_logic;
-               RESET: in std_logic
-           );
     end component;
 
     component mid_fifo
@@ -118,10 +82,7 @@ architecture behav of encoderMETA_tb is
            );
     end component;
 
-    --  Specifies which entity is bound with the component.
-    --for encoder_0: encoder use entity work.encoder;
     for encoderMETA_0: encoderMETA use entity work.encoderMETA;
-    --for input_fifo_0: input_fifo use entity work.FIFO_bb;
     for mid_fifo_0: mid_fifo use entity work.FIFO_bb;
     for output_fifo_0: output_fifo use entity work.FIFO_bb;
 
@@ -160,17 +121,6 @@ architecture behav of encoderMETA_tb is
 
     begin
         --  Component instantiation.
-        /*encoder_0: encoder
-        port map (clk => outer_clk,
-                  blk_in => blk_in,
-                  blk_out => blk_out,
-                  in_empty => in_empty,
-                  out_full => out_full,
-                  in_rd => in_rd,
-                  final_in => final_in,
-                  final_out => final_out,
-                  reset => outer_reset,
-                  out_wr => out_wr);*/
 
         encoderMETA_0: encoderMETA
         port map (clk => outer_clk,
@@ -183,30 +133,6 @@ architecture behav of encoderMETA_tb is
                 final_out => final_out_meta,
                 reset => outer_reset,
                 out_wr => out_wr_meta);
-
-        /*input_fifo_0: input_fifo
-        port map (CLK => outer_clk,
-                  BLK_IN => outer_input,
-                  WR_EN => outer_wr_en,
-                  BLK_OUT => blk_in,
-                  RD_EN => in_rd,
-                  EMPTY => in_empty,
-                  FINAL_IN => outer_final_in,
-                  FINAL_OUT => final_in,
-                  RESET => outer_reset,
-                  FULL => outer_full);
-
-        mid_fifo_0: mid_fifo
-        port map (CLK => outer_clk,
-                BLK_IN => blk_out,
-                WR_EN => out_wr,
-                BLK_OUT => blk_in_meta,
-                RD_EN => in_rd_meta,
-                EMPTY => in_empty_meta,
-                FINAL_IN => final_out,
-                FINAL_OUT => final_in_meta,
-                RESET => outer_reset,
-                FULL => out_full);*/
 
         mid_fifo_0: mid_fifo
         port map (CLK => outer_clk,
@@ -239,11 +165,15 @@ architecture behav of encoderMETA_tb is
 
             variable input_final:  std_logic;
             variable input_word:   std_logic_vector(general_word_size-1 downto 0);
+            variable expected_final: std_logic;
+            variable expected_word:  std_logic_vector(general_word_size-1 downto 0);
 
             variable space: character;
             variable available: boolean;
+            variable output_count: integer := 0;
         begin
             file_open(input_buf, "tb/data/encoder31_in.txt", read_mode);
+            file_open(output_buf, "tb/data/encoder31_out.txt", read_mode);
 
             -- first perform full reset
             outer_reset <= '0';
@@ -256,6 +186,7 @@ architecture behav of encoderMETA_tb is
             report "beginning tests";
 
             while not outer_final_out loop
+            --while true loop
                 if (outer_full = '0') and (not endfile(input_buf)) then
                     -- read input
                     readline(input_buf, read_col_from_input_buf);
@@ -283,11 +214,36 @@ architecture behav of encoderMETA_tb is
                 wait for 1 ns;
                 outer_clk <= '1';
                 wait for 1 ns;
+
+                -- check outputs
+                if available then
+                    assert not endfile(output_buf)
+                    report "output has more words than output file has lines" severity error;
+
+                    readline(output_buf, read_col_from_output_buf);
+                    read(read_col_from_output_buf, expected_final);
+                    read(read_col_from_output_buf, space);
+                    read(read_col_from_output_buf, expected_word);
+
+                    assert outer_output = expected_word
+                    report "bad encoding in test " & integer'image(output_count) & ". Expected: " & to_string(expected_word) & " but found " & to_string(outer_output) severity error;
+
+                    assert outer_final_out = expected_final
+                    report "bad final state in test " & integer'image(output_count) & ". Expected: " & std_logic'image(expected_final) & " but found " & std_logic'image(outer_final_out) severity error;
+                end if;
             end loop;
+
+            assert endfile(output_buf)
+            report "output has fewer words than output file has lines" severity error;
+
+            if endfile(output_buf) then
+                report "all tests done";
+            end if;
 
             wait for 10 ns;
 
             file_close(input_buf);
+            file_close(output_buf);
             wait;
         end process;
     end behav;

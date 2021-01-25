@@ -54,6 +54,24 @@ begin
         begin
             report("Fill");
             output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer);
+            if(fill_type = '1' and buffer_type = W_1FILL) then
+                state <= W_1FILL;
+                input_fill_length <= input_fill_length + 1;
+                report("1-Fill");
+            else
+                OUT_WR_loc <= '1';
+                if (final) then
+                    -- mark the end of all output
+                    FINAL_OUT <= '1';
+                end if;
+            end if;
+        end procedure;
+
+        procedure output_1Fill is
+        begin
+            output_buffer <= encode_fill(word_size, fill_counter_size, '1', input_fill_length, 0);
+            input_fill_length <= (others => '0');
+            state <= W_NONE;
             OUT_WR_loc <= '1';
             if (final) then
                 -- mark the end of all output
@@ -218,6 +236,12 @@ begin
                         handle_LFL_F;
                     when W_LFL_F =>
                         handle_LFL_L2;
+                    when W_1FILL =>
+                    if(buffer_type = W_NONE) then
+                        output_1Fill;
+                    else
+                        handle_F('1');
+                    end if;
                     when others =>
                 end case;
             end if;
@@ -243,16 +267,14 @@ begin
             if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final)) then
                 -- read the next word and push buffers forward
 
-                if state = W_NONE then
+                --if state = W_NONE then
                     buffer_type <= W_NONE;
-                end if;
+                --end if;
 
                 if (input_available = '1' and not final) then
                     -- there is a next word available. read it.
                     input_buffer <= BLK_IN;
-                    if buffer_type /= W_FLF then
-                        buffer_type <= parse_word_type_compax(word_size, BLK_IN);
-                    end if;
+                    buffer_type <= parse_word_type_compax(word_size, BLK_IN);
 
                     if (FINAL_IN = '1') then
                         final <= true;

@@ -11,7 +11,7 @@ entity decoderMETA_tb is
 
 architecture behav of decoderMETA_tb is
 
-    constant general_word_size : natural := 32;
+    constant general_word_size : natural := 20;
 
     -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
     function to_string ( a: std_logic_vector) return string is
@@ -119,9 +119,7 @@ architecture behav of decoderMETA_tb is
     end component;
 
     --  Specifies which entity is bound with the component.
-    for decoder_0: decoder use entity work.encoderMETA;
     for decoderMETA_0: decoderMETA use entity work.decoderMETA;
-    for input_fifo_0: input_fifo use entity work.FIFO_bb;
     for mid_fifo_0: mid_fifo use entity work.FIFO_bb;
     for output_fifo_0: output_fifo use entity work.FIFO_bb;
 
@@ -160,17 +158,6 @@ architecture behav of decoderMETA_tb is
 
     begin
         --  Component instantiation.
-        decoder_0: decoder
-        port map (clk => outer_clk,
-                  blk_in => blk_in,
-                  blk_out => blk_out,
-                  in_empty => in_empty,
-                  out_full => out_full,
-                  in_rd => in_rd,
-                  final_in => final_in,
-                  final_out => final_out,
-                  reset => outer_reset,
-                  out_wr => out_wr);
 
         decoderMETA_0: decoderMETA
         port map (clk => outer_clk,
@@ -184,41 +171,29 @@ architecture behav of decoderMETA_tb is
                 reset => outer_reset,
                 out_wr => out_wr_meta);
 
-        input_fifo_0: input_fifo
-        port map (CLK => outer_clk,
-                  BLK_IN => outer_input,
-                  WR_EN => outer_wr_en,
-                  BLK_OUT => blk_in_meta,
-                  RD_EN => in_rd_meta,
-                  EMPTY => in_empty_meta,
-                  FINAL_IN => outer_final_in,
-                  FINAL_OUT => final_in_meta,
-                  RESET => outer_reset,
-                  FULL => outer_full);
-
         mid_fifo_0: mid_fifo
         port map (CLK => outer_clk,
-                BLK_IN => blk_out_meta,
-                WR_EN => out_wr_meta,
-                BLK_OUT => blk_in,
-                RD_EN => in_rd,
-                EMPTY => in_empty,
-                FINAL_IN => final_out_meta,
-                FINAL_OUT => final_in,
+                BLK_IN => outer_input,
+                WR_EN => outer_wr_en,
+                BLK_OUT => blk_in_meta,
+                RD_EN => in_rd_meta,
+                EMPTY => in_empty_meta,
+                FINAL_IN => outer_final_in,
+                FINAL_OUT => final_in_meta,
                 RESET => outer_reset,
-                FULL => out_full_meta);
+                FULL => outer_full);
 
         output_fifo_0: output_fifo
         port map (CLK => outer_clk,
-                  BLK_IN => blk_out,
-                  WR_EN => out_wr,
+                  BLK_IN => blk_out_meta,
+                  WR_EN => out_wr_meta,
                   BLK_OUT => outer_output,
                   RD_EN => outer_rd_en,
                   EMPTY => outer_empty,
-                  FINAL_IN => final_out,
+                  FINAL_IN => final_out_meta,
                   FINAL_OUT => outer_final_out,
                   RESET => outer_reset,
-                  FULL => out_full);
+                  FULL => out_full_meta);
 
         --  This process does the real job.
         process

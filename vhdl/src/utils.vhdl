@@ -120,6 +120,12 @@ package utils is
     length: unsigned)
     return std_logic_vector;
 
+    function encode_fill_vwlcom (word_size: natural;
+    fill_counter_size: natural;
+    length: unsigned;
+    word_no: natural)
+    return std_logic_vector;
+
     function encode_flf_main (word_size: natural;
     literal_buffer: std_logic_vector)
     return std_logic_vector;
@@ -339,7 +345,11 @@ package body utils is
     return CompaxWord is
     begin
         if input_word(word_size-1) = '1' then
-            return W_LITERAL;
+            if is_all(input_word(word_size-1 downto 0), '1') then
+                return W_1FILL;
+            else
+                return W_LITERAL;
+            end if;
         elsif input_word(word_size-2) = '0' then
             if input_word(word_size-3) = '1' then
                 return W_LFL;
@@ -600,7 +610,7 @@ package body utils is
     zero_fill_length: unsigned)
     return std_logic_vector is
     begin
-        return std_logic_vector(zero_fill_length);
+        return std_logic_vector(zero_fill_length(word_size-1 downto 0));
     end encode_flf_fill;
 
     --
@@ -703,6 +713,30 @@ package body utils is
 
         return buf;
     end encode_lfl_vwlcom;
+
+    --
+    -- returns an encoded fill word of the given type in compax format.
+    -- the total length of the fill is given by the parameter length.
+    --
+    function encode_fill_vwlcom (word_size: natural;
+    fill_counter_size: natural;
+    length: unsigned;
+    word_no: natural)
+    return std_logic_vector is
+        variable length_vector: std_logic_vector(fill_counter_size-1 downto 0);
+        variable lowest_bit_idx: natural;
+        variable buf: std_logic_vector(word_size-1 downto 0);
+    begin
+        length_vector := std_logic_vector(length);
+        lowest_bit_idx := word_no * (word_size-3);
+
+        -- set control bits
+        buf(word_size-1 downto word_size-3) := "000";
+
+        -- copy the related (word_size-3) bits of the length representation vector
+        buf(word_size-4 downto 0) := std_logic_vector(shift_right(unsigned(length_vector), lowest_bit_idx)(word_size-4 downto 0));
+        return buf;
+    end encode_fill_vwlcom;
 
     --
     -- returns an encoded fill word of the given type in compax format.

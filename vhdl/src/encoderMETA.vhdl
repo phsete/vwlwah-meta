@@ -91,7 +91,16 @@ begin
         begin
             if (final) then
                 FINAL_OUT <= '1';
-                report("final");
+                --report("final");
+            end if;
+        end procedure;
+
+        procedure check_input_available is
+        begin
+            if (buffer_type = W_NONE and IN_EMPTY = '0') then
+                input_available <= '1';
+            else
+                input_available <= '0';
             end if;
         end procedure;
  
@@ -122,7 +131,7 @@ begin
             output_buffer <= encode_fill_compax(word_size, fill_counter_size, zero_fill_length);
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
-            -- TODO: extended Fill (fill-length verringern und checken ob > 0!)
+            -- kein extended Fill!
 
             buffer_type <= W_NONE;
             --check_final;
@@ -324,7 +333,7 @@ begin
                     when others =>
                         report("Error while handling next block type!");
                 end case;
-            elsif (final) then
+            elsif (FINAL_IN = '1' and buffer_type = W_NONE) then
                 -- output remaining buffers
                 if (state = W_0FILL) then
                     output_0Fill;
@@ -376,10 +385,8 @@ begin
                     when others =>
                 end case;
 
-                if (buffer_type = W_NONE and IN_EMPTY = '0') then
-                    input_available <= '1';
-                else
-                    input_available <= '0';
+                if(buffer_type = W_NONE) then
+                    check_input_available;
                 end if;
             end if;
         end if;
@@ -391,9 +398,10 @@ begin
             if (input_available = '1' and not final) then
                 -- ready to read input value
                 input_buffer <= BLK_IN;
-                if (FINAL_IN = '1' and buffer_type = W_NONE) then
-                    final <= true;
-                end if;
+            end if;
+
+            if (FINAL_IN = '1' and state = W_NONE) then
+                final <= true;
             end if;
 
             if (out_wr_loc = '1' and OUT_FULL = '0') then
