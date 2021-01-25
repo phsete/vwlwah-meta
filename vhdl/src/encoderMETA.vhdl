@@ -398,11 +398,11 @@ begin
             if (input_available = '1' and not final) then
                 -- ready to read input value
                 input_buffer <= BLK_IN;
+                if (FINAL_IN = '1'/* and state = W_NONE*/) then
+                    final <= true;
+                end if;
             end if;
 
-            if (FINAL_IN = '1' and state = W_NONE) then
-                final <= true;
-            end if;
 
             if (out_wr_loc = '1' and OUT_FULL = '0') then
                 -- ready to write output value
