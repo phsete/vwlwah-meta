@@ -136,7 +136,7 @@ begin
             -- kein extended Fill!
 
             buffer_type <= W_NONE;
-            --check_final;
+            check_final;
         end procedure;
 
         procedure output_Literal is
@@ -399,15 +399,17 @@ begin
         if (CLK'event and CLK='0') then        
             if(future_final) then
                 final <= true;
+                --check_final;
             end if;
             
             if (input_available = '1' and not final) then
                 -- ready to read input value
                 input_buffer <= BLK_IN;
-                if((state = W_LFL or buffer_type = W_OFF2) and FINAL_IN = '1') then
+                if(buffer_type /= W_NONE and FINAL_IN = '1') then
                     future_final <= true;
-                elsif (FINAL_IN = '1' and buffer_type /= W_OFF) then
+                elsif (FINAL_IN = '1' and buffer_type = W_NONE and IN_RD = '1') then
                     final <= true;
+                    --check_final;
                 end if;
             end if;
 

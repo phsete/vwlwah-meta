@@ -29,7 +29,7 @@ architecture behav of fullMETA_tb is
 
     component input_fifo
         Generic (
-                    constant addr_width: natural := 3;
+                    constant addr_width: natural := 4;
                     constant word_size: natural := general_word_size
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
@@ -66,7 +66,7 @@ architecture behav of fullMETA_tb is
     
     component mid_fifo
         Generic (
-                    constant addr_width: natural := 3;
+                    constant addr_width: natural := 4;
                     constant word_size: natural := general_word_size
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);
@@ -103,7 +103,7 @@ architecture behav of fullMETA_tb is
 
     component output_fifo
         Generic (
-                    constant addr_width: natural := 3;
+                    constant addr_width: natural := 4;
                     constant word_size: natural := general_word_size
                 );
         Port ( BLK_IN   : in  STD_LOGIC_VECTOR (word_size-1 downto 0);

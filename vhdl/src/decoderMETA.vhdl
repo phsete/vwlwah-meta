@@ -61,6 +61,7 @@ begin
                 report("1-Fill");
             else
                 OUT_WR_loc <= '1';
+                buffer_type <= W_NONE;
                 if (final) then
                     -- mark the end of all output
                     FINAL_OUT <= '1';
@@ -128,6 +129,7 @@ begin
                 output_buffer <= decode_flf_f_compax(word_size, input_buffer);
                 OUT_WR_loc <= '1';
                 state <= W_NONE;
+                buffer_type <= W_NONE;
             end if;
 
             if (final) then
@@ -265,16 +267,17 @@ begin
             else
                 IN_RD_loc <= '1';
             end if;
+            
+            
 
             if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final or future_final)) then
                 -- read the next word and push buffers forward
 
                 --if state = W_NONE then
-                    buffer_type <= W_NONE;
                 --end if;
 
                 if(future_final) then
-                    final <= true;
+                    FINAL_OUT <= '1';
                 end if;
 
                 if (input_available = '1' and not final) then
@@ -282,7 +285,7 @@ begin
                     input_buffer <= BLK_IN;
                     buffer_type <= parse_word_type_compax(word_size, BLK_IN);
 
-                    if(state = W_LFL and FINAL_IN = '1') then
+                    if((state = W_LFL or state = W_LFL_F) and FINAL_IN = '1') then
                         future_final <= true;
                     elsif (FINAL_IN = '1') then
                         final <= true;
