@@ -53,6 +53,7 @@ architecture IMP of encoderMETA is
     signal running:                 std_logic := '1';
     signal fill_words_left:         natural := 0;
     signal final:                   boolean := false;
+    signal future_final:            boolean := false;
     signal buffer_type:             Word_Sequence := W_NONE;
     signal state:                   Word_Sequence := W_NONE;
 
@@ -82,6 +83,7 @@ begin
                 running                 <= '1';
                 fill_words_left         <= 0;
                 final                   <= false;
+                future_final        <= false;
                 buffer_type             <= W_NONE;
                 state                   <= W_NONE;
             end if;
@@ -394,11 +396,17 @@ begin
         --
         -- falling edge
         --
-        if (CLK'event and CLK='0') then            
+        if (CLK'event and CLK='0') then        
+            if(future_final) then
+                final <= true;
+            end if;
+            
             if (input_available = '1' and not final) then
                 -- ready to read input value
                 input_buffer <= BLK_IN;
-                if (FINAL_IN = '1'/* and state = W_NONE*/) then
+                if((state = W_LFL or buffer_type = W_OFF2) and FINAL_IN = '1') then
+                    future_final <= true;
+                elsif (FINAL_IN = '1' and buffer_type /= W_OFF) then
                     final <= true;
                 end if;
             end if;

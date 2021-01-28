@@ -33,6 +33,7 @@ architecture IMP of decoderMeta is
     signal input_available:     std_logic := '0';
     signal running:             std_logic := '1';
     signal final:               boolean := false;
+    signal future_final:        boolean := false;
     signal IN_RD_loc:           std_logic;
     signal OUT_WR_loc:          std_logic;
     signal buffer_type:         CompaxWord := W_NONE;
@@ -194,6 +195,7 @@ begin
                 input_available     <= '0';
                 running             <= '1';
                 final               <= false;
+                future_final        <= false;
                 buffer_type         <= W_NONE;
                 state               <= W_NONE;
             end if;
@@ -264,19 +266,25 @@ begin
                 IN_RD_loc <= '1';
             end if;
 
-            if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final)) then
+            if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final or future_final)) then
                 -- read the next word and push buffers forward
 
                 --if state = W_NONE then
                     buffer_type <= W_NONE;
                 --end if;
 
+                if(future_final) then
+                    final <= true;
+                end if;
+
                 if (input_available = '1' and not final) then
                     -- there is a next word available. read it.
                     input_buffer <= BLK_IN;
                     buffer_type <= parse_word_type_compax(word_size, BLK_IN);
 
-                    if (FINAL_IN = '1') then
+                    if(state = W_LFL and FINAL_IN = '1') then
+                        future_final <= true;
+                    elsif (FINAL_IN = '1') then
                         final <= true;
                     end if;
                 end if;
