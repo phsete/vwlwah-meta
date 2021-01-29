@@ -244,12 +244,6 @@ begin
             end if;
 
             input_available <= not(IN_EMPTY);
-
-            -- temporary fix in vivado for duplicate driver
-            if (FINAL_IN = '1') then
-                final <= true;
-            end if;
-
         end if;
 
         -- falling clock signal
@@ -259,6 +253,10 @@ begin
                 IN_RD_loc <= '0';
             else
                 IN_RD_loc <= '1';
+            end if;
+
+            if (FINAL_IN = '1') then
+                final <= true;
             end if;
             
             if(reset_buffer_type) then

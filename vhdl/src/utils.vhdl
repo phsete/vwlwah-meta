@@ -697,8 +697,6 @@ package body utils is
         buf(word_size-4 downto word_size-6) := std_logic_vector(to_unsigned(dirty_eighth-1, 3));
         buf(word_size-7 downto word_size-9) := std_logic_vector(to_unsigned(dirty_eighth_snd-1, 3));
 
-        report("test: " & to_bstring(zero_fill_length));
-
         if(to_long) then
             buf(word_size-10) := '1';
         else
