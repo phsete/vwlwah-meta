@@ -34,6 +34,7 @@ architecture IMP of decoderMeta is
     signal running:             std_logic := '1';
     signal final:               boolean := false;
     signal future_final:        boolean := false;
+    signal reset_buffer_type:   boolean := false;
     signal IN_RD_loc:           std_logic;
     signal OUT_WR_loc:          std_logic;
     signal buffer_type:         CompaxWord := W_NONE;
@@ -61,7 +62,7 @@ begin
                 report("1-Fill");
             else
                 OUT_WR_loc <= '1';
-                buffer_type <= W_NONE;
+                reset_buffer_type <= true;
                 if (final) then
                     -- mark the end of all output
                     FINAL_OUT <= '1';
@@ -129,7 +130,7 @@ begin
                 output_buffer <= decode_flf_f_compax(word_size, input_buffer);
                 OUT_WR_loc <= '1';
                 state <= W_NONE;
-                buffer_type <= W_NONE;
+                reset_buffer_type <= true;
             end if;
 
             if (final) then
@@ -198,6 +199,7 @@ begin
                 running             <= '1';
                 final               <= false;
                 future_final        <= false;
+                reset_buffer_type   <= false;
                 buffer_type         <= W_NONE;
                 state               <= W_NONE;
             end if;
@@ -268,7 +270,10 @@ begin
                 IN_RD_loc <= '1';
             end if;
             
-            
+            if(reset_buffer_type) then
+                reset_buffer_type <= false;
+                buffer_type <= W_NONE;
+            end if;
 
             if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final or future_final)) then
                 -- read the next word and push buffers forward

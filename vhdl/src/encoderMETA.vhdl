@@ -407,7 +407,7 @@ begin
                 input_buffer <= BLK_IN;
                 if(buffer_type /= W_NONE and FINAL_IN = '1') then
                     future_final <= true;
-                elsif (FINAL_IN = '1' and buffer_type = W_NONE and IN_RD = '1') then
+                elsif (FINAL_IN = '1' and buffer_type = W_NONE) then
                     final <= true;
                     --check_final;
                 end if;
