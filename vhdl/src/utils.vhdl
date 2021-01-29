@@ -491,8 +491,8 @@ package body utils is
         variable buf: std_logic_vector(word_size-1 downto 0);
     begin
         buf(word_size-1 downto word_size-2) := "10";
-        buf(word_size-3 downto word_size/4) := (others => '0');
-        buf(word_size/4-1 downto 0) := content(word_size/4-1 downto 0);
+        --buf(word_size-3 downto word_size/4) := (others => '0');
+        buf(word_size-3 downto 0) := content(word_size-3 downto 0);
 
         return buf;
     end decode_lfl_f_compax;

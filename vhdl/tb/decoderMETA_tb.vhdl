@@ -11,7 +11,7 @@ entity decoderMETA_tb is
 
 architecture behav of decoderMETA_tb is
 
-    constant general_word_size : natural := 20;
+    constant general_word_size : natural := 32;
 
     -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
     function to_string ( a: std_logic_vector) return string is

@@ -11,7 +11,7 @@ entity fullMETA_tb is
 
 architecture behav of fullMETA_tb is
 
-    constant general_word_size : natural := 20;
+    constant general_word_size : natural := 32;
 
     -- found this function implementation at: https://stackoverflow.com/questions/15406887/vhdl-convert-vector-to-string
     function to_string ( a: std_logic_vector) return string is
@@ -238,7 +238,7 @@ architecture behav of fullMETA_tb is
             variable available: boolean;
             variable output_count: integer := 0;
         begin
-            file_open(input_buf, "tb/data/full20_in.txt", read_mode);
+            file_open(input_buf, "tb/data/full32_in.txt", read_mode);
 
             -- first perform full reset
             outer_reset <= '0';

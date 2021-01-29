@@ -335,7 +335,7 @@ begin
                     when others =>
                         report("Error while handling next block type!");
                 end case;
-            elsif (FINAL_IN = '1' and buffer_type = W_NONE) then
+            elsif (final) then
                 -- output remaining buffers
                 if (state = W_0FILL) then
                     output_0Fill;
@@ -401,16 +401,19 @@ begin
                 final <= true;
                 --check_final;
             end if;
+
+            if (not final and state = W_NONE and FINAL_IN = '1') then
+                if(buffer_type /= W_NONE) then
+                    future_final <= true;
+                else
+                    final <= true;
+                    --check_final;
+                end if;
+            end if;
             
             if (input_available = '1' and not final) then
                 -- ready to read input value
                 input_buffer <= BLK_IN;
-                if(buffer_type /= W_NONE and FINAL_IN = '1') then
-                    future_final <= true;
-                elsif (FINAL_IN = '1' and buffer_type = W_NONE) then
-                    final <= true;
-                    --check_final;
-                end if;
             end if;
 
 

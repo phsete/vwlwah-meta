@@ -33,7 +33,6 @@ architecture IMP of decoderMeta is
     signal input_available:     std_logic := '0';
     signal running:             std_logic := '1';
     signal final:               boolean := false;
-    signal future_final:        boolean := false;
     signal reset_buffer_type:   boolean := false;
     signal IN_RD_loc:           std_logic;
     signal OUT_WR_loc:          std_logic;
@@ -152,25 +151,16 @@ begin
             output_buffer <= decode_lfl_compax(word_size, input_buffer, 1);
             lfl_buffer <= decode_lfl_compax(word_size, input_buffer, 0);
             OUT_WR_loc <= '1';
-
-            if (final) then
-                -- mark the end of all output
-                FINAL_OUT <= '1';
-            end if;
+            reset_buffer_type <= true;
         end procedure;
 
         procedure handle_LFL_F is
         begin
             report("LFL_F");
             state <= W_LFL_F;
-            -- prepare to output the current literal word
+            -- prepare to output the current fill
             output_buffer <= decode_lfl_f_compax(word_size, input_buffer);
             OUT_WR_loc <= '1';
-
-            if (final) then
-                -- mark the end of all output
-                FINAL_OUT <= '1';
-            end if;
         end procedure;
 
         procedure handle_LFL_L2 is
@@ -200,7 +190,6 @@ begin
                 input_available     <= '0';
                 running             <= '1';
                 final               <= false;
-                future_final        <= false;
                 reset_buffer_type   <= false;
                 buffer_type         <= W_NONE;
                 state               <= W_NONE;
@@ -257,9 +246,9 @@ begin
             input_available <= not(IN_EMPTY);
 
             -- temporary fix in vivado for duplicate driver
-            --if (FINAL_IN = '1') then
-            --    final <= true;
-            --end if;
+            if (FINAL_IN = '1') then
+                final <= true;
+            end if;
 
         end if;
 
@@ -277,26 +266,17 @@ begin
                 buffer_type <= W_NONE;
             end if;
 
-            if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final or future_final)) then
+            if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final)) then
                 -- read the next word and push buffers forward
 
-                --if state = W_NONE then
-                --end if;
-
-                if(future_final) then
-                    final <= true;
+                if(state = W_LFL) then
+                    input_buffer <= BLK_IN;
                 end if;
 
-                if (input_available = '1' and not final) then
+                if (input_available = '1' and not final and not reset_buffer_type) then
                     -- there is a next word available. read it.
                     input_buffer <= BLK_IN;
                     buffer_type <= parse_word_type_compax(word_size, BLK_IN);
-
-                    if((state = W_LFL or state = W_LFL_F) and FINAL_IN = '1') then
-                        future_final <= true;
-                    elsif (FINAL_IN = '1') then
-                        final <= true;
-                    end if;
                 end if;
             else
                 -- if no word was read, check fill length to determine next read state
