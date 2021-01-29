@@ -284,7 +284,7 @@ begin
                 --end if;
 
                 if(future_final) then
-                    FINAL_OUT <= '1';
+                    final <= true;
                 end if;
 
                 if (input_available = '1' and not final) then
