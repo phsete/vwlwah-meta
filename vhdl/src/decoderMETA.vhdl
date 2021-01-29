@@ -72,6 +72,7 @@ begin
 
         procedure output_1Fill is
         begin
+            report("out 1-Fill");
             output_buffer <= encode_fill(word_size, fill_counter_size, '1', input_fill_length, 0);
             input_fill_length <= (others => '0');
             state <= W_NONE;
@@ -91,6 +92,7 @@ begin
             -- prepare to output the current literal word
             output_buffer <= decode_literal_compax(word_size, input_buffer);
             OUT_WR_loc <= '1';
+            reset_buffer_type <= true;
 
             if (final) then
                 -- mark the end of all output

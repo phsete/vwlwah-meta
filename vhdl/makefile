@@ -24,7 +24,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  fullMETA_tb
+	  decoderMETA_tb
 
 GHDL_CMD=ghdl
 
