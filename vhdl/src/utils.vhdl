@@ -478,7 +478,6 @@ package body utils is
         variable index: natural;
     begin
         index := natural(to_integer(unsigned(content(word_size-4-(2-literal_no*2) downto word_size-5-(2-literal_no*2)))));
-        report("index: " & integer'image(index));
         buf := (others => '0');
         buf(index*(word_size/4)+word_size/4-1 downto index*(word_size/4)) := content(word_size/4-1+literal_no*(word_size/4) downto literal_no*(word_size/4));
 

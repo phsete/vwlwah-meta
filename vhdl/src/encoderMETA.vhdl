@@ -91,7 +91,7 @@ begin
 
         procedure check_final is
         begin
-            if (final) then
+            if (final and state = W_NONE and buffer_type = W_NONE) then
                 FINAL_OUT <= '1';
                 --report("final");
             end if;
@@ -108,29 +108,32 @@ begin
  
         procedure output_1Fill is
         begin
-            report("output 1-Fill");
-            -- output of 1 fill (as Literal)
-            output_buffer <= (word_size-1 downto 0 => '1');
+            report("output 1-Fill as Literal");
+            -- output of Literal
+            output_buffer <= (others => '1');
+
+            if(one_fill_length > 1) then
+                one_fill_length <= one_fill_length - 1;
+                buffer_type <= W_1FILL;
+            else
+                buffer_type <= W_NONE;
+            end if;
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
 
-            if (one_fill_length > 1) then
-                -- the fill continues
-                buffer_type <= W_1FILL;
-                one_fill_length <= one_fill_length - 1;
-            else
-                -- reset counters and buffer type to read next word
-                buffer_type <= W_NONE;
-                one_fill_length <= to_unsigned(0, fill_counter_size);
-                check_final;
-            end if;
+            check_final;
         end procedure;
 
         procedure output_0Fill is
         begin
             report("output 0-Fill");
             -- output of 0 fill
-            output_buffer <= encode_fill_compax(word_size, fill_counter_size, zero_fill_length);
+            if(is_all(std_logic_vector(flf_zero_fill_length), '0')) then
+                output_buffer <= encode_fill_compax(word_size, fill_counter_size, zero_fill_length);
+            else
+                output_buffer <= encode_fill_compax(word_size, fill_counter_size, flf_zero_fill_length);
+                flf_zero_fill_length <= (others => '0');
+            end if;
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
             -- kein extended Fill!
@@ -184,6 +187,7 @@ begin
             else
                 report("output fill of flf");
                 output_buffer <= encode_flf_fill(word_size, flf_zero_fill_length);
+                flf_zero_fill_length <= (others => 'U');
                 buffer_type <= W_NONE;
                 check_final;
             end if;
@@ -230,6 +234,7 @@ begin
                         elsif(state = W_LF) then -- output previous Literal and 0-Fill and set new fill length
                             output_Literal;
                             buffer_type <= W_0FILL; -- outputs 0-Fill next clock cycle
+                            flf_zero_fill_length <= zero_fill_length;
                             zero_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
                         elsif(state = W_NCLITERAL) then
@@ -268,6 +273,9 @@ begin
                             output_Literal;
                             one_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_1FILL;
+                        elsif(state = W_1FILL) then
+                            output_1Fill;
+                            one_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                         end if;
                     when W_LITERAL =>
                         report("detected Literal");
@@ -335,7 +343,7 @@ begin
                     when others =>
                         report("Error while handling next block type!");
                 end case;
-            elsif (final) then
+            elsif (input_available = '0' and FINAL_IN = '1') then
                 -- output remaining buffers
                 if (state = W_0FILL) then
                     output_0Fill;
@@ -416,6 +424,9 @@ begin
                 input_buffer <= BLK_IN;
             end if;
 
+            if(input_available = '0' and FINAL_IN = '1') then
+                final <= true;
+            end if;
 
             if (out_wr_loc = '1' and OUT_FULL = '0') then
                 -- ready to write output value
@@ -428,6 +439,8 @@ begin
             else
                 running <= '0';
             end if;
+
+            check_final;
 
         end if;
 

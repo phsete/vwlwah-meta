@@ -29,6 +29,7 @@ architecture IMP of decoderMeta is
     signal input_fill_length:   unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal output_fill_length:  unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal input_buffer:        std_logic_vector(word_size-1 downto 0) := (others => 'U');
+    signal input_buffer_temp:   std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal output_buffer:       std_logic_vector(word_size-1 downto 0) := (others => 'U');
     signal input_available:     std_logic := '0';
     signal running:             std_logic := '1';
@@ -48,38 +49,49 @@ begin
         -- PROCEDURES --
         ----------------
 
+        procedure check_final is
+        begin
+            if(final and state = W_NONE) then
+                FINAL_OUT <= '1';
+            end if;
+        end procedure;
+
         --
         -- handles decoding of the current fill word
         --
         procedure handle_F (fill_type: std_logic) is
         begin
             report("Fill");
-            output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer);
             if(fill_type = '1' and buffer_type = W_1FILL) then
-                state <= W_1FILL;
+                --state <= W_1FILL;
                 input_fill_length <= input_fill_length + 1;
                 report("1-Fill");
             else
-                OUT_WR_loc <= '1';
-                reset_buffer_type <= true;
-                if (final) then
-                    -- mark the end of all output
-                    FINAL_OUT <= '1';
+                if(is_all(input_buffer_temp, 'U')) then
+                    output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer);
+                    reset_buffer_type <= true;
+                else
+                    output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer_temp);
+                    input_buffer_temp <= (others => 'U');
                 end if;
+                OUT_WR_loc <= '1';
+                --check_final;
+                    
             end if;
         end procedure;
 
         procedure output_1Fill is
         begin
             report("out 1-Fill");
-            output_buffer <= encode_fill(word_size, fill_counter_size, '1', input_fill_length, 0);
-            input_fill_length <= (others => '0');
-            state <= W_NONE;
-            OUT_WR_loc <= '1';
-            if (final) then
-                -- mark the end of all output
-                FINAL_OUT <= '1';
+            if(final) then
+                output_buffer <= encode_fill(word_size, fill_counter_size, '1', input_fill_length + 1, 0);
+            else
+                output_buffer <= encode_fill(word_size, fill_counter_size, '1', input_fill_length, 0);
             end if;
+            input_fill_length <= (others => '0');
+            reset_buffer_type <= true;
+            OUT_WR_loc <= '1';
+            --check_final;
         end procedure;
 
         --
@@ -89,14 +101,16 @@ begin
         begin
             report("Literal");
             -- prepare to output the current literal word
-            output_buffer <= decode_literal_compax(word_size, input_buffer);
-            OUT_WR_loc <= '1';
-            reset_buffer_type <= true;
-
-            if (final) then
-                -- mark the end of all output
-                FINAL_OUT <= '1';
+            if(is_all(input_buffer_temp, 'U')) then
+                output_buffer <= decode_literal_compax(word_size, input_buffer);
+                reset_buffer_type <= true;
+            else
+                output_buffer <= decode_literal_compax(word_size, input_buffer_temp);
+                input_buffer_temp <= (others => 'U');
             end if;
+            OUT_WR_loc <= '1';
+
+            --check_final;
         end procedure;
 
         --
@@ -106,14 +120,16 @@ begin
         begin
             report("FLF");
             -- prepare to output the current literal word
-            output_buffer <= decode_flf_f_compax(word_size, input_buffer);
+            if(is_all(input_buffer_temp, 'U')) then
+                output_buffer <= decode_flf_f_compax(word_size, input_buffer);
+            else
+                output_buffer <= decode_flf_f_compax(word_size, input_buffer_temp);
+                input_buffer_temp <= (others => 'U');
+            end if;
             OUT_WR_loc <= '1';
             state <= W_FLF_F2;
 
-            if (final) then
-                -- mark the end of all output
-                FINAL_OUT <= '1';
-            end if;
+            --check_final;
         end procedure;
 
         procedure handle_FLF_F (fill_no: natural) is
@@ -127,6 +143,7 @@ begin
                 output_buffer <= flf_buffer;
                 OUT_WR_loc <= '1';
                 state <= W_FLF_L;
+                reset_buffer_type <= true;
             else
                 output_buffer <= decode_flf_f_compax(word_size, input_buffer);
                 OUT_WR_loc <= '1';
@@ -134,10 +151,7 @@ begin
                 reset_buffer_type <= true;
             end if;
 
-            if (final) then
-                -- mark the end of all output
-                FINAL_OUT <= '1';
-            end if;
+            --check_final;
         end procedure;
 
         --
@@ -148,10 +162,16 @@ begin
             report("LFL");
             state <= W_LFL;
             -- prepare to output the current literal word
-            output_buffer <= decode_lfl_compax(word_size, input_buffer, 1);
-            lfl_buffer <= decode_lfl_compax(word_size, input_buffer, 0);
+            if(is_all(input_buffer_temp, 'U')) then
+                output_buffer <= decode_lfl_compax(word_size, input_buffer, 1);
+                lfl_buffer <= decode_lfl_compax(word_size, input_buffer, 0);
+                reset_buffer_type <= true;
+            else
+                output_buffer <= decode_lfl_compax(word_size, input_buffer_temp, 1);
+                lfl_buffer <= decode_lfl_compax(word_size, input_buffer_temp, 0);
+                input_buffer_temp <= (others => 'U');
+            end if;
             OUT_WR_loc <= '1';
-            reset_buffer_type <= true;
         end procedure;
 
         procedure handle_LFL_F is
@@ -171,10 +191,7 @@ begin
             OUT_WR_loc <= '1';
             state <= W_NONE;
 
-            if (final) then
-                -- mark the end of all output
-                FINAL_OUT <= '1';
-            end if;
+            --check_final;
         end procedure;
 
         --
@@ -186,6 +203,7 @@ begin
                 input_fill_length   <= (others => '0');
                 output_fill_length  <= (others => '0');
                 input_buffer        <= (others => 'U');
+                input_buffer_temp   <= (others => 'U');
                 output_buffer       <= (others => 'U');
                 input_available     <= '0';
                 running             <= '1';
@@ -203,25 +221,49 @@ begin
             -- don't write by default
             OUT_WR_loc <= '0';
 
-            if (running = '1' and state = W_NONE) then
+            if (running = '1' and state = W_NONE and not(final and input_fill_length > 0)) then
                 -- handle the current word type
 
                 case buffer_type is
                     when W_0FILL =>
-                        handle_F('0');
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_0FILL;
+                        else
+                            handle_F('0');
+                        end if;
                     when W_1FILL =>
                         handle_F('1');
                     when W_LITERAL =>
-                        handle_L;
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_Literal;
+                        else 
+                            handle_L;
+                        end if;
                     when W_FLF =>
-                        handle_FLF_F(0);
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_FLF_F1;
+                        else 
+                            handle_FLF_F(0);
+                        end if;
                     when W_LFL =>
-                        handle_LFL;
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_LFL_L1;
+                        else 
+                            handle_LFL;
+                        end if;
                     when others =>
                 end case;
             end if;
 
-            if(running = '1' and state /= W_NONE) then
+            if(running = '1' and state /= W_NONE and not(final and input_fill_length > 0)) then
                 case state is
                     when W_FLF =>
                         handle_FLF;
@@ -233,6 +275,18 @@ begin
                         handle_LFL_F;
                     when W_LFL_F =>
                         handle_LFL_L2;
+                    when W_LFL_L1 =>
+                        handle_LFL;
+                        state <= W_NONE;
+                    when W_FLF_F1 =>
+                        handle_FLF_F(0);
+                        state <= W_NONE;
+                    when W_Literal =>
+                        handle_L;
+                        state <= W_NONE;
+                    when W_0FILL =>
+                        handle_F('0');
+                        state <= W_NONE;
                     when W_1FILL =>
                     if(buffer_type = W_NONE) then
                         output_1Fill;
@@ -241,6 +295,32 @@ begin
                     end if;
                     when others =>
                 end case;
+            end if;
+
+            if (final and buffer_type = W_1FILL) then
+                case state is
+                    when W_LFL_L1 =>
+                        handle_LFL;
+                        state <= W_1FILL;
+                    when W_FLF_F1 =>
+                        handle_FLF_F(0);
+                        state <= W_1FILL;
+                    when W_Literal =>
+                        handle_L;
+                        state <= W_1FILL;
+                    when W_0FILL =>
+                        handle_F('0');
+                        state <= W_1FILL;
+                    when W_1FILL =>
+                        output_1Fill;
+                        state <= W_NONE;
+                        reset_buffer_type <= true;
+                    when W_NONE =>
+                        output_1Fill;
+                        state <= W_NONE;
+                        reset_buffer_type <= true;
+                    when others =>
+                end case;  
             end if;
 
             input_available <= not(IN_EMPTY);
@@ -271,17 +351,10 @@ begin
                     input_buffer <= BLK_IN;
                 end if;
 
-                if (input_available = '1' and not final and not reset_buffer_type) then
+                if (input_available = '1' and not final and state /= W_LFL) then
                     -- there is a next word available. read it.
                     input_buffer <= BLK_IN;
                     buffer_type <= parse_word_type_compax(word_size, BLK_IN);
-                end if;
-            else
-                -- if no word was read, check fill length to determine next read state
-                if (state = W_FLF or state = W_FLF_L) then
-                    IN_RD_loc <= '0';
-                else
-                    IN_RD_loc <= '1';
                 end if;
             end if;
 
@@ -296,6 +369,8 @@ begin
             else
                 running <= '0';
             end if;
+
+            check_final;
         end if;
 
         -- wait for a RESET signal
