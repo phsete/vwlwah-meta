@@ -56,6 +56,13 @@ begin
             end if;
         end procedure;
 
+        procedure check_final_woS is
+        begin
+            if(final) then
+                FINAL_OUT <= '1';
+            end if;
+        end procedure;
+
         --
         -- handles decoding of the current fill word
         --
@@ -75,7 +82,7 @@ begin
                     input_buffer_temp <= (others => 'U');
                 end if;
                 OUT_WR_loc <= '1';
-                --check_final;
+                check_final;
                     
             end if;
         end procedure;
@@ -91,7 +98,7 @@ begin
             input_fill_length <= (others => '0');
             reset_buffer_type <= true;
             OUT_WR_loc <= '1';
-            --check_final;
+            check_final;
         end procedure;
 
         --
@@ -110,7 +117,7 @@ begin
             end if;
             OUT_WR_loc <= '1';
 
-            --check_final;
+            check_final;
         end procedure;
 
         --
@@ -129,7 +136,7 @@ begin
             OUT_WR_loc <= '1';
             state <= W_FLF_F2;
 
-            --check_final;
+            check_final;
         end procedure;
 
         procedure handle_FLF_F (fill_no: natural) is
@@ -149,9 +156,10 @@ begin
                 OUT_WR_loc <= '1';
                 state <= W_NONE;
                 reset_buffer_type <= true;
+                check_final_woS;
             end if;
 
-            --check_final;
+            check_final;
         end procedure;
 
         --
@@ -191,7 +199,7 @@ begin
             OUT_WR_loc <= '1';
             state <= W_NONE;
 
-            --check_final;
+            check_final_woS;
         end procedure;
 
         --
@@ -369,8 +377,6 @@ begin
             else
                 running <= '0';
             end if;
-
-            check_final;
         end if;
 
         -- wait for a RESET signal
