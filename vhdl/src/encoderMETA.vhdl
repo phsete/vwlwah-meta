@@ -97,22 +97,6 @@ begin
             end if;
         end procedure;
 
-        procedure check_final_woB is
-        begin
-            if (final and state = W_NONE) then
-                FINAL_OUT <= '1';
-                --report("final");
-            end if;
-        end procedure;
-
-        procedure check_final_woS is
-        begin
-            if (final and buffer_type = W_NONE) then
-                FINAL_OUT <= '1';
-                --report("final");
-            end if;
-        end procedure;
-
         procedure check_input_available is
         begin
             if (buffer_type = W_NONE and IN_EMPTY = '0') then
@@ -131,13 +115,13 @@ begin
             if(one_fill_length > 1) then
                 one_fill_length <= one_fill_length - 1;
                 buffer_type <= W_1FILL;
-                check_final;
             else
                 buffer_type <= W_NONE;
-                check_final_woB;
             end if;
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
+
+            check_final;
         end procedure;
 
         procedure output_0Fill is
@@ -155,7 +139,7 @@ begin
             -- kein extended Fill!
 
             buffer_type <= W_NONE;
-            check_final_woB;
+            check_final;
         end procedure;
 
         procedure output_Literal is
@@ -198,14 +182,14 @@ begin
                     buffer_type <= W_OFF2;
                 else
                     buffer_type <= W_NONE;
-                    check_final_woB;
+                    check_final;
                 end if;
             else
                 report("output fill of flf");
                 output_buffer <= encode_flf_fill(word_size, flf_zero_fill_length);
                 flf_zero_fill_length <= (others => 'U');
                 buffer_type <= W_NONE;
-                check_final_woB;
+                check_final;
             end if;
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
@@ -377,7 +361,7 @@ begin
                     --out_wr_loc <= '0';
                 end if;
                 state <= W_NONE;
-                check_final_woS;
+                check_final;
             end if;
         end procedure;
 
@@ -455,6 +439,8 @@ begin
             else
                 running <= '0';
             end if;
+
+            check_final;
 
         end if;
 
