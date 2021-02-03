@@ -71,7 +71,7 @@ begin
         begin
             if (RESET = '0') then
                 zero_fill_length        <= (others => '0');
-                flf_zero_fill_length    <= (others => 'U');
+                flf_zero_fill_length    <= (others => '0');
                 one_fill_length         <= (others => '0');
                 input_buffer            <= (others => 'U');
                 literal_buffer          <= (others => 'U');
@@ -128,11 +128,11 @@ begin
         begin
             report("output 0-Fill");
             -- output of 0 fill
-            if(is_all(std_logic_vector(flf_zero_fill_length), 'U')) then
+            if(is_all(std_logic_vector(flf_zero_fill_length), '0')) then
                 output_buffer <= encode_fill_compax(word_size, fill_counter_size, zero_fill_length);
             else
                 output_buffer <= encode_fill_compax(word_size, fill_counter_size, flf_zero_fill_length);
-                flf_zero_fill_length <= (others => 'U');
+                flf_zero_fill_length <= (others => '0');
             end if;
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
