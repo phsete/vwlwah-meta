@@ -4,7 +4,7 @@ var output = "";
 var wordLength = 32;
 var i = 0;
 
-demoData[1].vwlwah[wordLength].forEach(row => {
+demoData.FLF.compax[wordLength].forEach(row => {
     output = output.concat(row);
     console.log("HEX " + "00000000".concat(parseInt(row, 2).toString(16).toUpperCase()).substr(-8));
     console.log("RESULT HEX " + resultHex.substr(i*8, 8));

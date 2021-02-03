@@ -67,9 +67,14 @@ begin
                 input_fill_length <= input_fill_length + 1;
                 report("1-Fill");
             else
-                output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer);
-                reset_buffer_type <= true;
-                check_final;
+                if(is_all(input_buffer_temp, 'U')) then
+                    output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer);
+                    reset_buffer_type <= true;
+                    check_final;
+                else
+                    output_buffer <= decode_fill_compax(word_size, fill_type, input_buffer_temp);
+                    input_buffer_temp <= (others => 'U');
+                end if;
                 OUT_WR_loc <= '1';
             end if;
         end procedure;
@@ -95,9 +100,14 @@ begin
         begin
             report("Literal");
             -- prepare to output the current literal word
-            output_buffer <= decode_literal_compax(word_size, input_buffer);
-            reset_buffer_type <= true;
-            check_final;
+            if(is_all(input_buffer_temp, 'U')) then
+                output_buffer <= decode_literal_compax(word_size, input_buffer);
+                reset_buffer_type <= true;
+                check_final;
+            else
+                output_buffer <= decode_literal_compax(word_size, input_buffer_temp);
+                input_buffer_temp <= (others => 'U');
+            end if;
             OUT_WR_loc <= '1';
         end procedure;
 
@@ -108,8 +118,13 @@ begin
         begin
             report("FLF");
             -- prepare to output the current literal word
-            output_buffer <= decode_flf_f_compax(word_size, input_buffer);
-            check_final;
+            if(is_all(input_buffer_temp, 'U')) then
+                output_buffer <= decode_flf_f_compax(word_size, input_buffer);
+                check_final;
+            else
+                output_buffer <= decode_flf_f_compax(word_size, input_buffer_temp);
+                input_buffer_temp <= (others => 'U');
+            end if;
             OUT_WR_loc <= '1';
             state <= W_FLF_F2;
         end procedure;
@@ -143,9 +158,15 @@ begin
             report("LFL");
             state <= W_LFL;
             -- prepare to output the current literal word
-            output_buffer <= decode_lfl_compax(word_size, input_buffer, 1);
-            lfl_buffer <= decode_lfl_compax(word_size, input_buffer, 0);
-            reset_buffer_type <= true;
+            if(is_all(input_buffer_temp, 'U')) then
+                output_buffer <= decode_lfl_compax(word_size, input_buffer, 1);
+                lfl_buffer <= decode_lfl_compax(word_size, input_buffer, 0);
+                reset_buffer_type <= true;
+            else
+                output_buffer <= decode_lfl_compax(word_size, input_buffer_temp, 1);
+                lfl_buffer <= decode_lfl_compax(word_size, input_buffer_temp, 0);
+                input_buffer_temp <= (others => 'U');
+            end if;
             OUT_WR_loc <= '1';
         end procedure;
 
@@ -177,6 +198,7 @@ begin
                 input_fill_length   <= (others => '0');
                 output_fill_length  <= (others => '0');
                 input_buffer        <= (others => 'U');
+                input_buffer_temp   <= (others => 'U');
                 output_buffer       <= (others => 'U');
                 input_available     <= '0';
                 running             <= '1';
@@ -194,25 +216,49 @@ begin
             -- don't write by default
             OUT_WR_loc <= '0';
 
-            if (running = '1' and state = W_NONE) then
+            if (running = '1' and state = W_NONE and not(final and input_fill_length > 0)) then
                 -- handle the current word type
 
                 case buffer_type is
                     when W_0FILL =>
-                        handle_F('0');
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_0FILL;
+                        else
+                            handle_F('0');
+                        end if;
                     when W_1FILL =>
                         handle_F('1');
                     when W_LITERAL =>
-                        handle_L;
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_Literal;
+                        else 
+                            handle_L;
+                        end if;
                     when W_FLF =>
-                        handle_FLF_F(0);
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_FLF_F1;
+                        else 
+                            handle_FLF_F(0);
+                        end if;
                     when W_LFL =>
-                        handle_LFL;
+                        if(input_fill_length > 0) then
+                            output_1Fill;
+                            input_buffer_temp <= input_buffer;
+                            state <= W_LFL_L1;
+                        else 
+                            handle_LFL;
+                        end if;
                     when others =>
                 end case;
             end if;
 
-            if(running = '1' and state /= W_NONE) then
+            if(running = '1' and state /= W_NONE and not(final and input_fill_length > 0)) then
                 case state is
                     when W_FLF =>
                         handle_FLF;
@@ -224,8 +270,52 @@ begin
                         handle_LFL_F;
                     when W_LFL_F =>
                         handle_LFL_L2;
+                    when W_LFL_L1 =>
+                        handle_LFL;
+                        state <= W_NONE;
+                    when W_FLF_F1 =>
+                        handle_FLF_F(0);
+                        state <= W_NONE;
+                    when W_Literal =>
+                        handle_L;
+                        state <= W_NONE;
+                    when W_0FILL =>
+                        handle_F('0');
+                        state <= W_NONE;
+                    when W_1FILL =>
+                    if(buffer_type = W_NONE) then
+                        output_1Fill;
+                    else
+                        handle_F('1');
+                    end if;
                     when others =>
                 end case;
+            end if;
+
+            if (final and buffer_type = W_1FILL) then
+                case state is
+                    when W_LFL_L1 =>
+                        handle_LFL;
+                        state <= W_1FILL;
+                    when W_FLF_F1 =>
+                        handle_FLF_F(0);
+                        state <= W_1FILL;
+                    when W_Literal =>
+                        handle_L;
+                        state <= W_1FILL;
+                    when W_0FILL =>
+                        handle_F('0');
+                        state <= W_1FILL;
+                    when W_1FILL =>
+                        output_1Fill;
+                        state <= W_NONE;
+                        reset_buffer_type <= true;
+                    when W_NONE =>
+                        output_1Fill;
+                        state <= W_NONE;
+                        reset_buffer_type <= true;
+                    when others =>
+                end case;  
             end if;
 
             input_available <= not(IN_EMPTY);
