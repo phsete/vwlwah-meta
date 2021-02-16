@@ -38,7 +38,7 @@ architecture IMP of encoderVWLCOM is
         return b;
     end function;
 
-    type Word_Sequence is (W_LITERAL, W_NCLITERAL, W_0FILL, W_1FILL, W_FL, W_FLF, W_OF, W_OFF, W_OFF2, W_LF, W_LFL, W_NONE, W_WAIT);
+    type Word_Sequence is (W_LITERAL, W_NCLITERAL, W_0FILL, W_1FILL, W_FL, W_FLF, W_EF, W_LF, W_LFL, W_NONE, W_WAIT);
 
     signal zero_fill_length:        unsigned(fill_counter_size-1 downto 0) := (others => '0');
     signal flf_zero_fill_length:    unsigned(fill_counter_size-1 downto 0) := (others => '0');
@@ -170,39 +170,56 @@ begin
         end procedure;
 
         procedure output_FLF is
+            variable first_overflow: std_logic_vector(word_size+(word_size-8-ceiled_eighth)/2-1 downto 0);
+            variable second_overflow: std_logic_vector(word_size+(word_size-8-ceiled_eighth)/2-1 downto 0);
         begin
             report("output FLF");
-            -- output of FLF
-            output_buffer <= encode_flf_main(word_size, literal_buffer);
+            if(zero_fill_length < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)))) then
+                if(flf_zero_fill_length < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)))) then
+                    -- output of FLF -> no extended Fills
+                    output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, zero_fill_length, flf_zero_fill_length, false, false);
+                    buffer_type <= W_NONE;
+                    check_final;
+                else
+                    -- output of FLF -> second extended Fill
+                    second_overflow := (others => '0');
+                    second_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
+                    second_overflow := std_logic_vector(second_overflow) and std_logic_vector(to_unsigned(to_integer(flf_zero_fill_length), word_size+(word_size-8-ceiled_eighth)/2));
+                    output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, zero_fill_length, unsigned(second_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size)), false, true);
+                    buffer_type <= W_NONE;
+                    --check_final;
+                end if;
+            else
+                if(flf_zero_fill_length < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)))) then
+                    -- output of FLF -> first extended Fill
+                    first_overflow := (others => '0');
+                    first_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
+                    first_overflow := std_logic_vector(first_overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), word_size+(word_size-8-ceiled_eighth)/2));
+                    output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, unsigned(first_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size)), flf_zero_fill_length, true, false);
+                    buffer_type <= W_EF;
+                    --check_final;
+                else
+                    -- output of FLF -> both extended Fills
+                    first_overflow := (others => '0');
+                    first_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
+                    first_overflow := std_logic_vector(first_overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), word_size+(word_size-8-ceiled_eighth)/2));
+                    second_overflow := (others => '0');
+                    second_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
+                    second_overflow := std_logic_vector(second_overflow) and std_logic_vector(to_unsigned(to_integer(flf_zero_fill_length), word_size+(word_size-8-ceiled_eighth)/2));
+                    output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, unsigned(first_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size)), unsigned(second_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size)), true, true);
+                    buffer_type <= W_EF;
+                    --check_final;
+                end if;
+            end if;
+            
             -- write by default, set to '0' otherwise
             out_wr_loc <= '1';
             literal_buffer <= (others => 'U');
-            skip_check_input <= true;
-
-            buffer_type <= W_OFF;
         end procedure;
 
-        procedure output_FF is
+        procedure output_EF is
         begin
-            -- output of FLF
-            if(buffer_type = W_OFF or buffer_type = W_OF) then
-                report("output fill of flf/lfl");
-                output_buffer <= encode_flf_fill(word_size, zero_fill_length);
-                if(buffer_type = W_OFF) then
-                    buffer_type <= W_OFF2;
-                    skip_check_input <= true;
-                else
-                    buffer_type <= W_NONE;
-                    check_final;
-                end if;
-            else
-                report("output fill of flf");
-                output_buffer <= encode_flf_fill(word_size, flf_zero_fill_length);
-                buffer_type <= W_NONE;
-                check_final;
-            end if;
-            -- write by default, set to '0' otherwise
-            out_wr_loc <= '1';
+            report("would output extended Fill here ...");
         end procedure;
 
         procedure output_LFL is
@@ -223,7 +240,7 @@ begin
                 overflow := std_logic_vector(overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), 2*word_size-10-ceiled_eighth*2));
                 output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, lfl_literal_buffer, unsigned(overflow(2*word_size-11-ceiled_eighth*2 downto word_size)), true);
                 zero_fill_length <= zero_fill_length(word_size-1 downto 0);
-                buffer_type <= W_OF;
+                buffer_type <= W_EF;
                 skip_check_input <= true;
             end if;
             
@@ -258,7 +275,7 @@ begin
                         elsif(state = W_FL) then -- set second fill length and output flf (reset fill lengths?)
                             flf_zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             state <= W_NONE;
-                            output_FLF;
+                            buffer_type <= W_FLF;
                         elsif(state = W_LITERAL) then -- set new fill length
                             state <= W_LF;
                             zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
@@ -406,9 +423,7 @@ begin
         -- rising edge
         --
         if (CLK'event and CLK='1') then
-            if(buffer_type /= W_OFF and buffer_type /= W_OFF2) then
-                out_wr_loc <= '0';
-            end if;
+            out_wr_loc <= '0';
             if (running = '1') then
                 case buffer_type is
                     when W_NONE =>
@@ -419,12 +434,8 @@ begin
                         output_0Fill;
                     when W_LITERAL =>
                         output_Literal;
-                    when W_OFF =>
-                        output_FF;
-                    when W_OFF2 =>
-                        output_FF;
-                    when W_OF =>
-                        output_FF;
+                    when W_FLF =>
+                        output_FLF;
                     when W_LFL =>
                         output_LFL;
                     when others =>

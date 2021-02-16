@@ -126,6 +126,14 @@ package utils is
     word_no: natural)
     return std_logic_vector;
 
+    function encode_flf_vwlcom (word_size: natural;
+    literal_buffer: std_logic_vector;
+    zero_fill_length: unsigned;
+    flf_zero_fill_length: unsigned;
+    first_to_long: boolean;
+    second_to_long: boolean)
+    return std_logic_vector;
+
     function encode_flf_main (word_size: natural;
     literal_buffer: std_logic_vector)
     return std_logic_vector;
@@ -572,6 +580,58 @@ package body utils is
         buf(word_size-3 downto 0) := std_logic_vector(shift_right(unsigned(length_vector), lowest_bit_idx)(word_size-3 downto 0));
         return buf;
     end encode_fill;
+
+    
+    --
+    -- returns an encoded flf word
+    --
+    function encode_flf_vwlcom (word_size: natural;
+    literal_buffer: std_logic_vector;
+    zero_fill_length: unsigned;
+    flf_zero_fill_length: unsigned;
+    first_to_long: boolean;
+    second_to_long: boolean)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable extended_literal_buffer: std_logic_vector((word_size/8+1)*8 downto 0);
+        variable dirty_eighth: natural;
+        variable ceiled_eighth: natural;
+    begin
+        extended_literal_buffer := (others => '0');
+        extended_literal_buffer(word_size-2 downto 0) := literal_buffer(word_size-2 downto 0);
+
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+
+        dirty_eighth := get_dirty_eighth(word_size, literal_buffer);
+
+        buf(word_size-1 downto word_size-3) := "010";
+        buf(word_size-4 downto word_size-6) := std_logic_vector(to_unsigned(dirty_eighth-1, 3));
+
+        if(first_to_long) then
+            buf(word_size-7) := '1';
+        else
+            buf(word_size-7) := '0';
+        end if;
+
+        if(second_to_long) then
+            buf(word_size-8) := '1';
+        else
+            buf(word_size-8) := '0';
+        end if;
+
+        -- only for fills with correct length -> longer fills should continue in next word
+        buf(word_size-9 downto word_size-8-(word_size-8-ceiled_eighth)/2) := std_logic_vector(to_unsigned(to_integer(zero_fill_length), (word_size-8-ceiled_eighth)/2));
+
+        buf(word_size-9-(word_size-8-ceiled_eighth)/2 downto word_size-8-(word_size-8-ceiled_eighth)/2-ceiled_eighth) := extended_literal_buffer(dirty_eighth*ceiled_eighth-1 downto dirty_eighth*ceiled_eighth-ceiled_eighth);
+
+        -- only for fills with correct length -> longer fills should continue in next word
+        buf(word_size-9-(word_size-8-ceiled_eighth)/2-ceiled_eighth downto 0) := std_logic_vector(to_unsigned(to_integer(flf_zero_fill_length), (word_size-8-ceiled_eighth)/2));
+
+        return buf;
+    end encode_flf_vwlcom;
 
     --
     -- returns an encoded flf word
