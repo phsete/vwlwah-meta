@@ -175,7 +175,8 @@ begin
             variable max_fill_length: unsigned(128 downto 0);
         begin
             report("output FLF");
-            max_fill_length := unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)));
+            max_fill_length := (others => '0');
+            max_fill_length((word_size-8-ceiled_eighth)/2) := '1';
             if(zero_fill_length < max_fill_length) then
                 if(unsigned(input_buffer(word_size-3 downto 0)) < max_fill_length) then
                     -- output of FLF -> no extended Fills
@@ -229,7 +230,8 @@ begin
             variable max_fill_length: unsigned(128 downto 0);
         begin
             report("output LFL");
-            max_fill_length := unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, word_size-10-ceiled_eighth*2)));
+            max_fill_length := (others => '0');
+            max_fill_length(word_size-10-ceiled_eighth*2) := '1';
             if(zero_fill_length < max_fill_length) then
                 -- output of LFL
                 output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, input_buffer(word_size-2 downto 0), zero_fill_length, false);
