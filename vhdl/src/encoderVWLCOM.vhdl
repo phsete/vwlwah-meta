@@ -242,7 +242,7 @@ begin
                 -- output of LFL
                 overflow := (others => '0');
                 overflow(2*word_size-11-ceiled_eighth*2 downto word_size) := (others => '1');
-                overflow(127 downto 0) := std_logic_vector(overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), 127));
+                overflow(127 downto 0) := std_logic_vector(overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), 128));
                 output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, input_buffer(word_size-2 downto 0), unsigned(overflow(127 downto word_size)), true);
                 zero_fill_length <= zero_fill_length(word_size-1 downto 0);
                 buffer_type <= W_EF;
