@@ -172,10 +172,12 @@ begin
         procedure output_FLF is
             variable first_overflow: std_logic_vector(128 downto 0);
             variable second_overflow: std_logic_vector(128 downto 0);
+            variable max_fill_length: unsigned(128 downto 0);
         begin
             report("output FLF");
-            if(zero_fill_length < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)))) then
-                if(unsigned(input_buffer(word_size-3 downto 0)) < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)))) then
+            max_fill_length := unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)));
+            if(zero_fill_length < max_fill_length) then
+                if(unsigned(input_buffer(word_size-3 downto 0)) < max_fill_length) then
                     -- output of FLF -> no extended Fills
                     output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, zero_fill_length, unsigned(input_buffer(word_size-3 downto 0)), false, false);
                     buffer_type <= W_NONE;
@@ -190,7 +192,7 @@ begin
                     --check_final;
                 end if;
             else
-                if(unsigned(input_buffer(word_size-3 downto 0)) < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)))) then
+                if(unsigned(input_buffer(word_size-3 downto 0)) < max_fill_length) then
                     -- output of FLF -> first extended Fill
                     first_overflow := (others => '0');
                     first_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
@@ -224,10 +226,11 @@ begin
 
         procedure output_LFL is
             variable overflow: std_logic_vector(128 downto 0);
+            variable max_fill_length: unsigned(128 downto 0);
         begin
             report("output LFL");
-
-            if(zero_fill_length < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, word_size-10-ceiled_eighth*2)))) then
+            max_fill_length := unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, word_size-10-ceiled_eighth*2)));
+            if(zero_fill_length < max_fill_length) then
                 -- output of LFL
                 output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, input_buffer(word_size-2 downto 0), zero_fill_length, false);
                 buffer_type <= W_NONE;
