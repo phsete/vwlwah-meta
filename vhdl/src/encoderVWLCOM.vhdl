@@ -56,8 +56,6 @@ architecture IMP of encoderVWLCOM is
     signal buffer_type:             Word_Sequence := W_NONE;
     signal state:                   Word_Sequence := W_NONE;
     signal ceiled_eighth:           natural := 0;
-    signal flf_of_size:             natural := 0;
-    signal lfl_of_size:             natural := 0;
     signal skip_check_input:        boolean := false;
 
 begin
@@ -172,8 +170,8 @@ begin
         end procedure;
 
         procedure output_FLF is
-            variable first_overflow: std_logic_vector(flf_of_size downto 0);
-            variable second_overflow: std_logic_vector(flf_of_size downto 0);
+            variable first_overflow: std_logic_vector(128 downto 0);
+            variable second_overflow: std_logic_vector(128 downto 0);
         begin
             report("output FLF");
             if(zero_fill_length < unsigned(std_logic_vector(to_unsigned(1, 1)) & std_logic_vector(to_unsigned(0, (word_size-8-ceiled_eighth)/2)))) then
@@ -225,7 +223,7 @@ begin
         end procedure;
 
         procedure output_LFL is
-            variable overflow: std_logic_vector(lfl_of_size downto 0);
+            variable overflow: std_logic_vector(128 downto 0);
         begin
             report("output LFL");
 
@@ -420,9 +418,6 @@ begin
         if(word_size > ceiled_eighth*8) then
             ceiled_eighth <= ceiled_eighth + 1;
         end if;
-
-        flf_of_size <= word_size+(word_size-8-ceiled_eighth)/2-1;
-        lfl_of_size <= 2*word_size-11-ceiled_eighth*2;
 
         --
         -- rising edge
