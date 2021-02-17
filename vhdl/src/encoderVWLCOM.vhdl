@@ -101,7 +101,7 @@ begin
 
         procedure check_input_available is
         begin
-            if ((buffer_type = W_NONE and IN_EMPTY = '0') or (skip_check_input and IN_EMPTY = '0')) then
+            if ((buffer_type = W_NONE and IN_EMPTY = '0') or skip_check_input) then -- removed  and IN_EMPTY = '0' from second statement
                 input_available <= '1';
             else
                 input_available <= '0';
@@ -183,23 +183,30 @@ begin
                     output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, zero_fill_length, unsigned(input_buffer(word_size-3 downto 0)), false, false);
                     buffer_type <= W_NONE;
                     check_final;
+                    zero_fill_length <= to_unsigned(0, fill_counter_size);
+                    flf_zero_fill_length <= to_unsigned(0, fill_counter_size);
                 else
                     -- output of FLF -> second extended Fill
                     second_overflow := (others => '0');
                     second_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
                     second_overflow(127 downto 0) := std_logic_vector(second_overflow) and std_logic_vector(to_unsigned(to_integer(unsigned(input_buffer(word_size-3 downto 0))), 128));
                     output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, zero_fill_length, unsigned(second_overflow(127 downto word_size)), false, true);
-                    buffer_type <= W_NONE;
+                    buffer_type <= W_EF;
+                    skip_check_input <= true;
+                    zero_fill_length <= to_unsigned(0, fill_counter_size);
                     --check_final;
                 end if;
             else
                 if(unsigned(input_buffer(word_size-3 downto 0)) < max_fill_length) then
+                    report("hier");
                     -- output of FLF -> first extended Fill
                     first_overflow := (others => '0');
                     first_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
                     first_overflow(127 downto 0) := std_logic_vector(first_overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), 128));
                     output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, unsigned(first_overflow(127 downto word_size)), unsigned(input_buffer(word_size-3 downto 0)), true, false);
                     buffer_type <= W_EF;
+                    skip_check_input <= true;
+                    flf_zero_fill_length <= to_unsigned(0, fill_counter_size);
                     --check_final;
                 else
                     -- output of FLF -> both extended Fills
@@ -211,6 +218,7 @@ begin
                     second_overflow(127 downto 0) := std_logic_vector(second_overflow) and std_logic_vector(to_unsigned(to_integer(unsigned(input_buffer(word_size-3 downto 0))), 128));
                     output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, unsigned(first_overflow(127 downto word_size)), unsigned(second_overflow(127 downto word_size)), true, true);
                     buffer_type <= W_EF;
+                    skip_check_input <= true;
                     --check_final;
                 end if;
             end if;
@@ -222,7 +230,33 @@ begin
 
         procedure output_EF is
         begin
-            report("would output extended Fill here ...");
+            report("output extended Fill");
+            if(zero_fill_length /= to_unsigned(0, fill_counter_size)) then
+                if(flf_zero_fill_length /= to_unsigned(0, fill_counter_size)) then
+                    report("double");
+                    report(integer'image(to_integer(flf_zero_fill_length)));
+                    zero_fill_length <= to_unsigned(0, fill_counter_size);
+                    flf_zero_fill_length <= to_unsigned(0, fill_counter_size);
+                    -- double extended Fill
+                    -- TODO -> Fill Länge muss vorher schon auf die Hälfte gesetzt sein wenn der overflow berechnet wird!!!
+                else
+                    report("first");
+                    -- first extended Fill
+                    output_buffer <= std_logic_vector(zero_fill_length(word_size-1 downto 0));
+                    zero_fill_length <= to_unsigned(0, fill_counter_size);
+                end if;
+            else
+                if(flf_zero_fill_length /= to_unsigned(0, fill_counter_size)) then
+                    report("second");
+                    -- second extended Fill
+                    output_buffer <= std_logic_vector(flf_zero_fill_length(word_size-1 downto 0));
+                    flf_zero_fill_length <= to_unsigned(0, fill_counter_size);
+                end if;
+            end if;
+            out_wr_loc <= '1';
+            buffer_type <= W_NONE;
+            skip_check_input <= true;
+            check_final;
         end procedure;
 
         procedure output_LFL is
@@ -237,6 +271,7 @@ begin
                 output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, input_buffer(word_size-2 downto 0), zero_fill_length, false);
                 buffer_type <= W_NONE;
                 check_final;
+                zero_fill_length <= to_unsigned(0, fill_counter_size);
             else
                 -- fill is to long
                 -- output of LFL
@@ -244,7 +279,7 @@ begin
                 overflow(2*word_size-11-ceiled_eighth*2 downto word_size) := (others => '1');
                 overflow(127 downto 0) := std_logic_vector(overflow) and std_logic_vector(to_unsigned(to_integer(zero_fill_length), 128));
                 output_buffer <= encode_lfl_vwlcom(word_size, literal_buffer, input_buffer(word_size-2 downto 0), unsigned(overflow(127 downto word_size)), true);
-                zero_fill_length <= zero_fill_length(word_size-1 downto 0);
+                zero_fill_length(fill_counter_size-1 downto word_size) <= (others => '0');
                 buffer_type <= W_EF;
                 skip_check_input <= true;
             end if;
@@ -439,6 +474,8 @@ begin
                         output_0Fill;
                     when W_LITERAL =>
                         output_Literal;
+                    when W_EF =>
+                        output_EF;
                     when others =>
                 end case;
 
