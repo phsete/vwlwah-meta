@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 package utils is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
-    type CompaxWord is (W_NONE, W_0FILL, W_1FILL, W_LITERAL, W_FLF, W_LFL, W_FLF_F1, W_FLF_F2, W_FLF_L, W_LFL_L1, W_LFL_F, W_LFL_L2, W_LFLe, W_LFL_FLe, W_FLFe, W_FLF_LFe, W_FLF_Fe, W_FLFe1, W_FLFe2);
+    type CompaxWord is (W_NONE, W_0FILL, W_1FILL, W_LITERAL, W_FLF, W_LFL, W_FLF_F1, W_FLF_F2, W_FLF_L, W_LFL_L1, W_LFL_F, W_LFL_L2, W_LFLe, W_LFL_FLe, W_FLFe, W_FLF_LFe, W_FLF_Fe, W_FLFe1, W_FLFe2, W_LFLe_L2, W_LFL_Fe);
 
     function is_all (vec : std_logic_vector;
     val : std_logic)

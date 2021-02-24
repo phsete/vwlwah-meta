@@ -118,7 +118,6 @@ begin
         begin
             report("LFL_L1");
             -- prepare to output the current literal word
-            lfl_buffer <= input_buffer;
             output_buffer <= decode_lfl_l_vwlcom(word_size, input_buffer);
             buffer_type <= W_LFL_F;
             OUT_WR_loc <= '1';
@@ -143,12 +142,53 @@ begin
             check_final;
         end procedure;
 
-        procedure handle_next_word is
+        procedure handle_LFLe is
+        begin
+            report("LFL_L1");
+            -- prepare to output the current literal word
+            lfl_buffer <= input_buffer;
+            output_buffer <= decode_lfl_l_vwlcom(word_size, input_buffer);
+            buffer_type <= W_LFL_Fe;
+            OUT_WR_loc <= '1';
+        end procedure;
+
+        procedure handle_LFLe_F is
+        begin
+            report("LFL_F");
+            -- prepare to output the current fill
+            output_buffer <= decode_lfl_f_vwlcom(word_size, input_buffer);
+            buffer_type <= W_LFL_FLe;
+            OUT_WR_loc <= '1';
+        end procedure;
+
+        procedure handle_LFLe_Fe is
+        begin
+            report("LFL_Fe");
+            -- prepare to output the current fill
+            output_buffer <= decode_fill_compax(word_size, '0', input_buffer);
+            buffer_type <= W_LFLe_L2;
+            OUT_WR_loc <= '1';
+        end procedure;
+
+        procedure handle_LFLe_L2 is
+        begin
+            report("LFL_L2");
+            -- prepare to output the current literal word
+            output_buffer <= decode_lfl_l2_vwlcom(word_size, lfl_buffer);
+            lfl_buffer <= (others => 'U');
+            OUT_WR_loc <= '1';
+            buffer_type <= W_NONE;
+            check_final;
+        end procedure;
+
+        procedure handle_next_word (set_buffer_type: boolean) is
         begin
             if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final) and not finished) then
                 -- read the next word and push buffers forward
                 input_buffer <= BLK_IN;
-                buffer_type <= parse_word_type_vwlcom(word_size, BLK_IN);
+                if(set_buffer_type) then
+                    buffer_type <= parse_word_type_vwlcom(word_size, BLK_IN);
+                end if;
 
                 if(final) then
                     finished <= true;
@@ -199,16 +239,26 @@ begin
                         handle_FLF_L;
                     when W_FLF_F2 =>
                         handle_FLF_F;
-                        handle_next_word;
+                        handle_next_word(true);
                     when W_LFL =>
                         handle_LFL;
                     when W_LFL_F =>
                         handle_LFL_F;
                     when W_LFL_L2 =>
                         handle_LFL_L2;
-                        handle_next_word;
+                        handle_next_word(true);
+                    when W_LFLe =>
+                        handle_LFLe;
+                    when W_LFL_Fe =>
+                        handle_LFLe_F;
+                        handle_next_word(false);
+                    when W_LFL_FLe =>
+                        handle_LFLe_Fe;
+                    when W_LFLe_L2 =>
+                        handle_LFLe_L2;
+                        handle_next_word(true);
                     when W_NONE =>
-                        handle_next_word;
+                        handle_next_word(true);
                     when others =>
                 end case;
             end if;
@@ -219,7 +269,7 @@ begin
         -- falling clock signal
         -- reads inputs, steps buffer pipeline forward and determines future read state
         if (CLK'event and CLK='0') then
-            if(buffer_type = W_NONE or buffer_type = W_0FILL or buffer_type = W_LITERAL or buffer_type = W_FLF_F2 or buffer_type = W_LFL_L2) then
+            if(buffer_type = W_NONE or buffer_type = W_0FILL or buffer_type = W_LITERAL or buffer_type = W_FLF_F2 or buffer_type = W_LFL_L2 or buffer_type = W_LFLe_L2 or buffer_type = W_LFL_Fe) then
                 IN_RD_loc <= '1';
             else
                 IN_RD_loc <= '0';
