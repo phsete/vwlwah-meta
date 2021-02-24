@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 package utils is
     type Word is (W_NONE, W_0FILL, W_1FILL, W_LITERAL);
-    type CompaxWord is (W_NONE, W_0FILL, W_1FILL, W_LITERAL, W_FLF, W_LFL, W_FLF_F1, W_FLF_F2, W_FLF_L, W_LFL_L1, W_LFL_F, W_LFL_L2, W_LFLe, W_LFL_FLe, W_FLFe, W_FLF_LFe, W_FLF_Fe, W_FLFe1, W_FLFe2, W_LFLe_L2, W_LFL_Fe);
+    type CompaxWord is (W_NONE, W_0FILL, W_1FILL, W_LITERAL, W_FLF, W_LFL, W_FLF_F1, W_FLF_F2, W_FLF_L, W_LFL_L1, W_LFL_F, W_LFL_L2, W_LFLe, W_LFL_FLe, W_FLFe, W_FLF_LFe, W_FLF_Fe, W_FLFe1, W_FLFe2, W_LFLe_L2, W_LFL_Fe, W_FLFe_Fe, W_FLFe_L, W_FLFe_F2e, W_FLF_F2e, W_FLFe1_Fe, W_FLFe1_L, W_FLFe1_F2, W_FLFe2_L, W_FLFe2_F2, W_FLFe2_F2e);
 
     function is_all (vec : std_logic_vector;
     val : std_logic)
@@ -99,6 +99,16 @@ package utils is
 
     function decode_flf_f2_vwlcom (word_size: natural;
     content: std_logic_vector)
+    return std_logic_vector;
+
+    function decode_flf_fe_vwlcom (word_size: natural;
+    content: std_logic_vector;
+    extension: std_logic_vector)
+    return std_logic_vector;
+
+    function decode_flf_f2e_vwlcom (word_size: natural;
+    content: std_logic_vector;
+    extension: std_logic_vector)
     return std_logic_vector;
 
     function decode_lfl_l_vwlcom (word_size: natural;
@@ -607,6 +617,53 @@ package body utils is
 
         return buf;
     end decode_flf_f2_vwlcom;
+
+    function decode_flf_fe_vwlcom (word_size: natural;
+    content: std_logic_vector;
+    extension: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable ceiled_eighth: natural;
+        variable fill_length: natural;
+    begin
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+        fill_length := (word_size-8-ceiled_eighth)/2;
+        if((word_size-8-ceiled_eighth) > (fill_length*2)) then
+            fill_length := fill_length + 1;
+        end if;
+
+        buf(word_size-1 downto word_size-2) := "10";
+        buf(word_size-3 downto 0) := (others => '0'); 
+        buf(word_size/2-1+fill_length downto word_size/2) := content(word_size-9 downto word_size-8-fill_length);
+        buf(word_size/2-1 downto 0) := extension(word_size-1 downto word_size/2);
+
+        return buf;
+    end decode_flf_fe_vwlcom;
+
+    function decode_flf_f2e_vwlcom (word_size: natural;
+    content: std_logic_vector;
+    extension: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable ceiled_eighth: natural;
+        variable fill_length: natural;
+    begin
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+        fill_length := (word_size-8-ceiled_eighth)/2;
+
+        buf(word_size-1 downto word_size-2) := "10";
+        buf(word_size-3 downto fill_length) := (others => '0');
+        buf(word_size/2-1+fill_length downto word_size/2) := content(fill_length-1 downto 0);
+        buf(word_size/2-1 downto 0) := extension(word_size/2-1 downto 0);
+
+        return buf;
+    end decode_flf_f2e_vwlcom;
 
     function decode_lfl_l_vwlcom (word_size: natural;
     content: std_logic_vector)

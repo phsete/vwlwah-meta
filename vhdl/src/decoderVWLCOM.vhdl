@@ -110,6 +110,117 @@ begin
             buffer_type <= W_NONE;
             check_final;
         end procedure;
+        
+        procedure handle_FLFe is
+        begin
+            -- prepare to output the current literal word
+            flf_buffer <= input_buffer;
+            OUT_WR_loc <= '0';
+            buffer_type <= W_FLFe_Fe;
+        end procedure;
+        
+        procedure handle_FLFe_e is
+        begin
+            report("FLF_F1");
+            -- prepare to output the current literal word
+            output_buffer <= decode_flf_fe_vwlcom(word_size, flf_buffer, input_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe_L;
+        end procedure;
+        
+        procedure handle_FLFe_L is
+        begin
+            report("FLF_L");
+            -- prepare to output the current literal word
+            output_buffer <= decode_flf_l_vwlcom(word_size, flf_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe_F2e;
+        end procedure;
+
+        procedure handle_FLFe_F is
+        begin
+            report("FLF_F2");
+            output_buffer <= decode_flf_f2e_vwlcom(word_size, flf_buffer, input_buffer);
+            flf_buffer <= (others => 'U');
+            OUT_WR_loc <= '1';
+            buffer_type <= W_NONE;
+            check_final;
+        end procedure;
+
+        procedure handle_FLFe1 is
+        begin
+            report("FLF_F1");
+            -- prepare to output the current literal word
+            flf_buffer <= input_buffer;
+            output_buffer <= decode_flf_f_vwlcom(word_size, input_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe1_Fe;
+        end procedure;
+        
+        procedure handle_FLFe1_e is
+        begin
+            report("FLF_F1e");
+            -- prepare to output the current literal word
+            output_buffer <= decode_fill_compax(word_size, '0', input_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe1_L;
+        end procedure;
+        
+        procedure handle_FLFe1_L is
+        begin
+            report("FLF_L");
+            -- prepare to output the current literal word
+            output_buffer <= decode_flf_l_vwlcom(word_size, flf_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe1_F2;
+        end procedure;
+
+        procedure handle_FLFe1_F is
+        begin
+            report("FLF_F2");
+            output_buffer <= decode_flf_f2_vwlcom(word_size, flf_buffer);
+            flf_buffer <= (others => 'U');
+            OUT_WR_loc <= '1';
+            buffer_type <= W_NONE;
+            check_final;
+        end procedure;
+
+        procedure handle_FLFe2 is
+        begin
+            report("FLF_F1");
+            -- prepare to output the current literal word
+            flf_buffer <= input_buffer;
+            output_buffer <= decode_flf_f_vwlcom(word_size, input_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe2_L;
+        end procedure;
+        
+        procedure handle_FLFe2_L is
+        begin
+            report("FLF_L");
+            -- prepare to output the current literal word
+            output_buffer <= decode_flf_l_vwlcom(word_size, flf_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe2_F2;
+        end procedure;
+
+        procedure handle_FLFe2_F is
+        begin
+            report("FLF_F2");
+            output_buffer <= decode_flf_f2_vwlcom(word_size, flf_buffer);
+            flf_buffer <= (others => 'U');
+            OUT_WR_loc <= '1';
+            buffer_type <= W_FLFe2_F2e;
+        end procedure;
+
+        procedure handle_FLFe2_Fe is
+        begin
+            report("FLF_F2e");
+            output_buffer <= decode_fill_compax(word_size, '0', input_buffer);
+            OUT_WR_loc <= '1';
+            buffer_type <= W_NONE;
+            check_final;
+        end procedure;
 
         --
         -- handles decoding of the current LFL word
@@ -240,6 +351,36 @@ begin
                     when W_FLF_F2 =>
                         handle_FLF_F;
                         handle_next_word(true);
+                    when W_FLFe =>
+                        handle_FLFe;
+                        handle_next_word(false);
+                    when W_FLFe_Fe =>
+                        handle_FLFe_e;
+                    when W_FLFe_L =>
+                        handle_FLFe_L;
+                    when W_FLFe_F2e =>
+                        handle_FLFe_F;
+                        handle_next_word(true);
+                    when W_FLFe1 =>
+                        handle_FLFe1;
+                        handle_next_word(false);
+                    when W_FLFe1_Fe =>
+                        handle_FLFe1_e;
+                    when W_FLFe1_L =>
+                        handle_FLFe1_L;
+                    when W_FLFe1_F2 =>
+                        handle_FLFe1_F;
+                        handle_next_word(true);
+                    when W_FLFe2 =>
+                        handle_FLFe2;
+                    when W_FLFe2_L =>
+                        handle_FLFe2_L;
+                    when W_FLFe2_F2 =>
+                        handle_FLFe2_F;
+                        handle_next_word(false);
+                    when W_FLFe2_F2e =>
+                        handle_FLFe2_Fe;
+                        handle_next_word(true);
                     when W_LFL =>
                         handle_LFL;
                     when W_LFL_F =>
@@ -269,7 +410,7 @@ begin
         -- falling clock signal
         -- reads inputs, steps buffer pipeline forward and determines future read state
         if (CLK'event and CLK='0') then
-            if(buffer_type = W_NONE or buffer_type = W_0FILL or buffer_type = W_LITERAL or buffer_type = W_FLF_F2 or buffer_type = W_LFL_L2 or buffer_type = W_LFLe_L2 or buffer_type = W_LFL_Fe) then
+            if(buffer_type = W_NONE or buffer_type = W_0FILL or buffer_type = W_LITERAL or buffer_type = W_FLF_F2 or buffer_type = W_LFL_L2 or buffer_type = W_LFLe_L2 or buffer_type = W_LFL_Fe or buffer_type = W_FLFe or buffer_type = W_FLFe_F2e or buffer_type = W_FLFe2_F2 or buffer_type = W_FLFe2_F2e or buffer_type = W_FLFe1_F2 or buffer_type = W_FLFe1) then
                 IN_RD_loc <= '1';
             else
                 IN_RD_loc <= '0';
