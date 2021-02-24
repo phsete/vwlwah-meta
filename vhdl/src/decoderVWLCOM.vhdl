@@ -145,7 +145,6 @@ begin
 
         procedure handle_next_word is
         begin
-            report("next word");
             if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final) and not finished) then
                 -- read the next word and push buffers forward
                 input_buffer <= BLK_IN;
