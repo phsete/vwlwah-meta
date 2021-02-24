@@ -15,6 +15,7 @@ MODULES=\
 	  encoderVWLCOM \
 	  decoder \
 	  decoderMeta \
+	  decoderVWLCOM \
 	  logic_or \
 	  AXIS2FIFO_v1_0 \
 	  AXIS2FIFO_v1_0_S00_AXIS \
@@ -24,7 +25,7 @@ MODULES=\
 	  sizeup
 
 TESTBENCH=\
-	  encoderVWLCOM_tb
+	  decoderVWLCOM_tb
 
 GHDL_CMD=ghdl
 
