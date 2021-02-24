@@ -119,7 +119,7 @@ begin
             report("LFL_L1");
             -- prepare to output the current literal word
             lfl_buffer <= input_buffer;
-            output_buffer <= decode_lfl_compax(word_size, input_buffer, 1);
+            output_buffer <= decode_lfl_l_vwlcom(word_size, input_buffer);
             buffer_type <= W_LFL_F;
             OUT_WR_loc <= '1';
         end procedure;
@@ -128,7 +128,7 @@ begin
         begin
             report("LFL_F");
             -- prepare to output the current fill
-            output_buffer <= decode_lfl_f_compax(word_size, input_buffer);
+            output_buffer <= decode_lfl_f_vwlcom(word_size, input_buffer);
             buffer_type <= W_LFL_L2;
             OUT_WR_loc <= '1';
         end procedure;
@@ -137,7 +137,7 @@ begin
         begin
             report("LFL_L2");
             -- prepare to output the current literal word
-            output_buffer <= lfl_buffer;
+            output_buffer <= decode_lfl_l2_vwlcom(word_size, input_buffer);
             OUT_WR_loc <= '1';
             buffer_type <= W_NONE;
             check_final;

@@ -101,6 +101,18 @@ package utils is
     content: std_logic_vector)
     return std_logic_vector;
 
+    function decode_lfl_l_vwlcom (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector;
+
+    function decode_lfl_f_vwlcom (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector;
+
+    function decode_lfl_l2_vwlcom (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector;
+
     function decode_lfl_compax (word_size: natural;
     content: std_logic_vector;
     literal_no: natural)
@@ -571,8 +583,6 @@ package body utils is
         fill_length := (word_size-8-ceiled_eighth)/2;
 
         buf(word_size-1 downto 0) := (others => '0');
-        report(integer'image(fill_length+ceiled_eighth-1));
-        report(integer'image(fill_length));
         buf((index+1)*ceiled_eighth-1 downto index*ceiled_eighth) := content(fill_length+ceiled_eighth-1 downto fill_length);
 
         return buf;
@@ -597,6 +607,64 @@ package body utils is
 
         return buf;
     end decode_flf_f2_vwlcom;
+
+    function decode_lfl_l_vwlcom (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable ceiled_eighth: natural;
+        variable index: natural;
+    begin
+        index := natural(to_integer(unsigned(content(word_size-4 downto word_size-6))));
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+
+        buf(word_size-1 downto 0) := (others => '0');
+        buf((index+1)*ceiled_eighth-1 downto index*ceiled_eighth) := content(word_size-11 downto word_size-10-ceiled_eighth);
+
+        return buf;
+    end decode_lfl_l_vwlcom;
+
+    function decode_lfl_f_vwlcom (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable ceiled_eighth: natural;
+        variable fill_length: natural;
+    begin
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+        fill_length := word_size-10-ceiled_eighth*2;
+
+        buf(word_size-1 downto word_size-2) := "10";
+        buf(word_size-3 downto fill_length) := (others => '0');
+        buf(fill_length-1 downto 0) := content(fill_length-1 downto 0);
+
+        return buf;
+    end decode_lfl_f_vwlcom;
+
+    function decode_lfl_l2_vwlcom (word_size: natural;
+    content: std_logic_vector)
+    return std_logic_vector is
+        variable buf: std_logic_vector(word_size-1 downto 0);
+        variable ceiled_eighth: natural;
+        variable index: natural;
+    begin
+        index := natural(to_integer(unsigned(content(word_size-7 downto word_size-9))));
+        ceiled_eighth := word_size/8;
+        if(word_size > ceiled_eighth*8) then
+            ceiled_eighth := ceiled_eighth + 1;
+        end if;
+
+        buf(word_size-1 downto 0) := (others => '0');
+        buf((index+1)*ceiled_eighth-1 downto index*ceiled_eighth) := content(word_size-11-ceiled_eighth downto word_size-10-2*ceiled_eighth);
+
+        return buf;
+    end decode_lfl_l2_vwlcom;
 
     function decode_lfl_compax (word_size: natural;
     content: std_logic_vector;
