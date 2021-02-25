@@ -49,6 +49,7 @@ begin
         -- PROCEDURES --
         ----------------
 
+        -- check if state is final and finished and output FINAL_OUT signal
         procedure check_final is
         begin
             if(final and finished) then
@@ -87,12 +88,15 @@ begin
         procedure handle_FLF is
         begin
             report("FLF_F1");
-            -- prepare to output the current literal word
+            -- prepare to output the current Fill word
             output_buffer <= decode_flf_f_vwlcom(word_size, input_buffer);
             OUT_WR_loc <= '1';
             buffer_type <= W_FLF_L;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF Literal word
+        --
         procedure handle_FLF_L is
         begin
             report("FLF_L");
@@ -102,32 +106,44 @@ begin
             buffer_type <= W_FLF_F2;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF second Fill word
+        --
         procedure handle_FLF_F is
         begin
             report("FLF_F2");
+            -- prepare to output the current Fill word
             output_buffer <= decode_flf_f2_vwlcom(word_size, input_buffer);
             OUT_WR_loc <= '1';
             buffer_type <= W_NONE;
             check_final;
         end procedure;
         
+        --
+        -- prepares decoding of an FLF word if both Fills are extended
+        --
         procedure handle_FLFe is
         begin
-            -- prepare to output the current literal word
             flf_buffer <= input_buffer;
             OUT_WR_loc <= '0';
             buffer_type <= W_FLFe_Fe;
         end procedure;
         
+        --
+        -- handles decoding of the current FLF first Fill extension when both Fills are extended
+        --
         procedure handle_FLFe_e is
         begin
             report("FLF_F1");
-            -- prepare to output the current literal word
+            -- prepare to output the current fill extension
             output_buffer <= decode_flf_fe_vwlcom(word_size, flf_buffer, input_buffer);
             OUT_WR_loc <= '1';
             buffer_type <= W_FLFe_L;
         end procedure;
         
+        --
+        -- handles decoding of the current FLF Literal word when both Fills are extended
+        --
         procedure handle_FLFe_L is
         begin
             report("FLF_L");
@@ -137,9 +153,13 @@ begin
             buffer_type <= W_FLFe_F2e;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF second Fill word and its extension when both Fills are extended
+        --
         procedure handle_FLFe_F is
         begin
             report("FLF_F2");
+            -- prepare to output the current fill extension
             output_buffer <= decode_flf_f2e_vwlcom(word_size, flf_buffer, input_buffer);
             flf_buffer <= (others => 'U');
             OUT_WR_loc <= '1';
@@ -147,6 +167,9 @@ begin
             check_final;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF first Fill word when the first Fill is extended
+        --
         procedure handle_FLFe1 is
         begin
             report("FLF_F1");
@@ -157,15 +180,21 @@ begin
             buffer_type <= W_FLFe1_Fe;
         end procedure;
         
+        --
+        -- handles decoding of the current FLF first Fill extension when the first Fill is extended
+        --
         procedure handle_FLFe1_e is
         begin
             report("FLF_F1e");
-            -- prepare to output the current literal word
+            -- prepare to output the current fill extension
             output_buffer <= decode_fill_compax(word_size, '0', input_buffer);
             OUT_WR_loc <= '1';
             buffer_type <= W_FLFe1_L;
         end procedure;
         
+        --
+        -- handles decoding of the current FLF Literal word when the first Fill is extended
+        --
         procedure handle_FLFe1_L is
         begin
             report("FLF_L");
@@ -175,9 +204,13 @@ begin
             buffer_type <= W_FLFe1_F2;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF second Fill word when the first Fill is extended
+        --
         procedure handle_FLFe1_F is
         begin
             report("FLF_F2");
+            -- prepare to output the current fill extension
             output_buffer <= decode_flf_f2_vwlcom(word_size, flf_buffer);
             flf_buffer <= (others => 'U');
             OUT_WR_loc <= '1';
@@ -185,6 +218,9 @@ begin
             check_final;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF first Fill word when the second Fill is extended
+        --
         procedure handle_FLFe2 is
         begin
             report("FLF_F1");
@@ -195,6 +231,9 @@ begin
             buffer_type <= W_FLFe2_L;
         end procedure;
         
+        --
+        -- handles decoding of the current FLF Literal word when the second Fill is extended
+        --
         procedure handle_FLFe2_L is
         begin
             report("FLF_L");
@@ -204,18 +243,26 @@ begin
             buffer_type <= W_FLFe2_F2;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF second Fill word when the second Fill is extended
+        --
         procedure handle_FLFe2_F is
         begin
             report("FLF_F2");
+            -- prepare to output the current fill
             output_buffer <= decode_flf_f2_vwlcom(word_size, flf_buffer);
             flf_buffer <= (others => 'U');
             OUT_WR_loc <= '1';
             buffer_type <= W_FLFe2_F2e;
         end procedure;
 
+        --
+        -- handles decoding of the current FLF second Fill extension when the second Fill is extended
+        --
         procedure handle_FLFe2_Fe is
         begin
             report("FLF_F2e");
+            -- prepare to output the current fill extension
             output_buffer <= decode_fill_compax(word_size, '0', input_buffer);
             OUT_WR_loc <= '1';
             buffer_type <= W_NONE;
@@ -234,6 +281,9 @@ begin
             OUT_WR_loc <= '1';
         end procedure;
 
+        --
+        -- handles decoding of the current LFL Fill word
+        --
         procedure handle_LFL_F is
         begin
             report("LFL_F");
@@ -243,6 +293,9 @@ begin
             OUT_WR_loc <= '1';
         end procedure;
 
+        --
+        -- handles decoding of the current LFL second Literal word
+        --
         procedure handle_LFL_L2 is
         begin
             report("LFL_L2");
@@ -253,6 +306,9 @@ begin
             check_final;
         end procedure;
 
+        --
+        -- handles decoding of the current LFL word when the Fill is extended
+        --
         procedure handle_LFLe is
         begin
             report("LFL_L1");
@@ -263,6 +319,9 @@ begin
             OUT_WR_loc <= '1';
         end procedure;
 
+        --
+        -- handles decoding of the current LFL Fill word when the Fill is extended
+        --
         procedure handle_LFLe_F is
         begin
             report("LFL_F");
@@ -272,15 +331,21 @@ begin
             OUT_WR_loc <= '1';
         end procedure;
 
+        --
+        -- handles decoding of the current LFL Fill extension when the Fill is extended
+        --
         procedure handle_LFLe_Fe is
         begin
             report("LFL_Fe");
-            -- prepare to output the current fill
+            -- prepare to output the current fill extension
             output_buffer <= decode_fill_compax(word_size, '0', input_buffer);
             buffer_type <= W_LFLe_L2;
             OUT_WR_loc <= '1';
         end procedure;
 
+        --
+        -- handles decoding of the current LFL second Literal word when the Fill is extended
+        --
         procedure handle_LFLe_L2 is
         begin
             report("LFL_L2");
@@ -292,6 +357,9 @@ begin
             check_final;
         end procedure;
 
+        --
+        -- process the next word and load it into buffer
+        --
         procedure handle_next_word (set_buffer_type: boolean) is
         begin
             if (IN_RD_loc = '1' and running = '1' and (input_available = '1' or final) and not finished) then
@@ -342,9 +410,11 @@ begin
                 case buffer_type is
                     when W_0FILL =>
                         handle_F;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_LITERAL =>
                         handle_L;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_FLF =>
                         handle_FLF;
@@ -352,9 +422,11 @@ begin
                         handle_FLF_L;
                     when W_FLF_F2 =>
                         handle_FLF_F;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_FLFe =>
                         handle_FLFe;
+                        -- preload next word into buffer to finish fill
                         handle_next_word(false);
                     when W_FLFe_Fe =>
                         handle_FLFe_e;
@@ -362,9 +434,11 @@ begin
                         handle_FLFe_L;
                     when W_FLFe_F2e =>
                         handle_FLFe_F;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_FLFe1 =>
                         handle_FLFe1;
+                        -- preload next word into buffer to finish fill
                         handle_next_word(false);
                     when W_FLFe1_Fe =>
                         handle_FLFe1_e;
@@ -372,6 +446,7 @@ begin
                         handle_FLFe1_L;
                     when W_FLFe1_F2 =>
                         handle_FLFe1_F;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_FLFe2 =>
                         handle_FLFe2;
@@ -379,9 +454,11 @@ begin
                         handle_FLFe2_L;
                     when W_FLFe2_F2 =>
                         handle_FLFe2_F;
+                        -- preload next word into buffer to finish fill
                         handle_next_word(false);
                     when W_FLFe2_F2e =>
                         handle_FLFe2_Fe;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_LFL =>
                         handle_LFL;
@@ -389,18 +466,22 @@ begin
                         handle_LFL_F;
                     when W_LFL_L2 =>
                         handle_LFL_L2;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_LFLe =>
                         handle_LFLe;
                     when W_LFL_Fe =>
                         handle_LFLe_F;
+                        -- preload next word into buffer to finish fill
                         handle_next_word(false);
                     when W_LFL_FLe =>
                         handle_LFLe_Fe;
                     when W_LFLe_L2 =>
                         handle_LFLe_L2;
+                        -- preload next word into buffer
                         handle_next_word(true);
                     when W_NONE =>
+                    -- preload next word into buffer
                         handle_next_word(true);
                     when others =>
                 end case;
@@ -412,6 +493,7 @@ begin
         -- falling clock signal
         -- reads inputs, steps buffer pipeline forward and determines future read state
         if (CLK'event and CLK='0') then
+            -- set IN_RD when ready to read next word
             if(buffer_type = W_NONE or buffer_type = W_0FILL or buffer_type = W_LITERAL or buffer_type = W_FLF_F2 or buffer_type = W_LFL_L2 or buffer_type = W_LFLe_L2 or buffer_type = W_LFL_Fe or buffer_type = W_FLFe or buffer_type = W_FLFe_F2e or buffer_type = W_FLFe2_F2 or buffer_type = W_FLFe2_F2e or buffer_type = W_FLFe1_F2 or buffer_type = W_FLFe1) then
                 IN_RD_loc <= '1';
             else

@@ -91,6 +91,9 @@ begin
             end if;
         end procedure;
 
+        --
+        -- check if final is set and output FINAL_OUT signal
+        --
         procedure check_final is
         begin
             if (final) then
@@ -99,9 +102,12 @@ begin
             end if;
         end procedure;
 
+        --
+        -- check if a new input is available or if this should get skipped
+        --
         procedure check_input_available is
         begin
-            if ((buffer_type = W_NONE and IN_EMPTY = '0') or skip_check_input) then -- removed  and IN_EMPTY = '0' from second statement
+            if ((buffer_type = W_NONE and IN_EMPTY = '0') or skip_check_input) then
                 input_available <= '1';
             else
                 input_available <= '0';
@@ -111,6 +117,9 @@ begin
             end if;
         end procedure;
  
+        --
+        -- encode and prepare to output 1-Fill
+        --
         procedure output_1Fill is
         begin
             report("output 1-Fill");
@@ -131,6 +140,9 @@ begin
             end if;
         end procedure;
 
+        --
+        -- prepare to output 0-Fill
+        --
         procedure output_0Fill is
         begin
             report("output 0-Fill");
@@ -151,6 +163,9 @@ begin
             end if;
         end procedure;
 
+        --
+        -- prepare to output Literal
+        --
         procedure output_Literal is
         begin
             report("output Literal");
@@ -166,9 +181,11 @@ begin
             end if;
 
             buffer_type <= W_NONE;
-            --check_final;
         end procedure;
 
+        --
+        -- prepare to output FLF word
+        --
         procedure output_FLF is
             variable first_overflow: std_logic_vector(127 downto 0);
             variable second_overflow: std_logic_vector(127 downto 0);
@@ -194,11 +211,9 @@ begin
                     buffer_type <= W_EF;
                     skip_check_input <= true;
                     zero_fill_length <= to_unsigned(0, fill_counter_size);
-                    --check_final;
                 end if;
             else
                 if(unsigned(input_buffer(word_size-3 downto 0)) < max_fill_length) then
-                    report("hier");
                     -- output of FLF -> first extended Fill
                     first_overflow := (others => '0');
                     first_overflow(word_size+(word_size-8-ceiled_eighth)/2-1 downto word_size) := (others => '1');
@@ -207,7 +222,6 @@ begin
                     buffer_type <= W_EF;
                     skip_check_input <= true;
                     flf_zero_fill_length <= to_unsigned(0, fill_counter_size);
-                    --check_final;
                 else
                     -- output of FLF -> both extended Fills
                     first_overflow := (others => '0');
@@ -219,7 +233,6 @@ begin
                     output_buffer <= encode_flf_vwlcom(word_size, literal_buffer, unsigned(first_overflow(127 downto word_size)), unsigned(second_overflow(127 downto word_size)), true, true);
                     buffer_type <= W_EF;
                     skip_check_input <= true;
-                    --check_final;
                 end if;
             end if;
             
@@ -228,6 +241,9 @@ begin
             literal_buffer <= (others => 'U');
         end procedure;
 
+        --
+        -- prepare to output extended Fill word
+        --
         procedure output_EF is
         begin
             report("output extended Fill");
@@ -259,6 +275,9 @@ begin
             check_final;
         end procedure;
 
+        --
+        -- prepare to output LFL word
+        --
         procedure output_LFL is
             variable overflow: std_logic_vector(127 downto 0);
             variable max_fill_length: unsigned(127 downto 0);
@@ -306,20 +325,20 @@ begin
                             state <= W_0FILL;
                             zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             fill_words_left <= 1;
-                        elsif(state = W_0FILL) then -- output previous 0-Fill and set new fill length
+                        elsif(state = W_0FILL) then -- set new fill length
                             left_temp := zero_fill_length;
                             left_temp := shift_left(left_temp, word_size-2);
                             left_temp(word_size-3 downto 0) := unsigned(input_buffer(word_size-3 downto 0));
                             fill_words_left <= fill_words_needed(word_size, fill_counter_size, left_temp);
                             zero_fill_length <= left_temp;
-                        elsif(state = W_FL) then -- set second fill length and output flf (reset fill lengths?)
+                        elsif(state = W_FL) then -- set second fill length and output flf
                             flf_zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             state <= W_NONE;
                             output_FLF;
                         elsif(state = W_LITERAL) then -- set new fill length
                             state <= W_LF;
                             zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
-                        elsif(state = W_LF) then -- output previous Literal and 0-Fill and set new fill length
+                        elsif(state = W_LF) then -- output previous Literal and set new fill length
                             output_Literal;
                             left_temp := zero_fill_length;
                             left_temp := shift_left(left_temp, word_size-2);
@@ -327,11 +346,11 @@ begin
                             fill_words_left <= fill_words_needed(word_size, fill_counter_size, left_temp);
                             zero_fill_length <= left_temp;
                             state <= W_0FILL;
-                        elsif(state = W_NCLITERAL) then
+                        elsif(state = W_NCLITERAL) then -- output previous Literal and set new fill length
                             output_Literal;
                             zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
-                        elsif(state = W_1FILL) then
+                        elsif(state = W_1FILL) then -- output previous 1-Fill and set new fill length
                             output_1Fill;
                             zero_fill_length(word_size-3 downto 0) <= unsigned(input_buffer(word_size-3 downto 0));
                             state <= W_0FILL;
@@ -345,9 +364,9 @@ begin
                             output_0Fill;
                             one_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_1FILL;
-                        elsif(state = W_FL) then -- set second fill length and output flf (reset fill lengths?)
+                        elsif(state = W_FL) then -- set second fill length and output flf
                             output_0Fill;
-                            buffer_type <= W_LITERAL;
+                            buffer_type <= W_LITERAL;  -- outputs Literal next clock cycle
                             one_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_1FILL;
                         elsif(state = W_LITERAL) then -- set new fill length
@@ -356,24 +375,24 @@ begin
                             state <= W_1FILL;
                         elsif(state = W_LF) then -- output previous Literal and 0-Fill and set new fill length
                             output_Literal;
-                            buffer_type <= W_0FILL;
+                            buffer_type <= W_0FILL; -- outputs 0-Fill next clock cycle
                             one_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_1FILL;
-                        elsif(state = W_NCLITERAL) then
+                        elsif(state = W_NCLITERAL) then -- output previous Literal and set new fill length
                             output_Literal;
                             one_fill_length <= unsigned("00" & input_buffer(word_size-3 downto 0));
                             state <= W_1FILL;
                         end if;
                     when W_LITERAL =>
                         report("detected Literal");
-                        if(state = W_NONE) then
+                        if(state = W_NONE) then -- set literal buffer
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 state <= W_NCLITERAL;
                             else
                                 state <= W_LITERAL;
                             end if;
                             literal_buffer <= input_buffer(word_size-2 downto 0);
-                        elsif(state = W_0FILL) then
+                        elsif(state = W_0FILL) then -- output 0-Fill if not compressable, otherwise continue FLF and set literal buffer
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 output_0Fill;
                                 state <= W_NCLITERAL;
@@ -381,7 +400,7 @@ begin
                                 state <= W_FL;
                             end if;
                             literal_buffer <= input_buffer(word_size-2 downto 0);
-                        elsif(state = W_FL) then
+                        elsif(state = W_FL) then -- output previous 0-Fill and Literal and set second literal buffer
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 state <= W_NCLITERAL;
                             else
@@ -390,7 +409,7 @@ begin
                             output_0Fill;
                             buffer_type <= W_LITERAL; -- outputs Literal next clock cycle
                             snd_literal_buffer <= input_buffer(word_size-2 downto 0);
-                        elsif(state = W_LITERAL) then
+                        elsif(state = W_LITERAL) then -- output previous Literal and set literal buffer
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 state <= W_NCLITERAL;
                             else
@@ -398,10 +417,10 @@ begin
                             end if;
                             output_Literal;
                             literal_buffer <= input_buffer(word_size-2 downto 0);
-                        elsif(state = W_LF) then -- (reset literal buffers?)
+                        elsif(state = W_LF) then -- if compressable, output LFL, otherwise output previous Literal and 0-Fill and set literal buffer
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 output_Literal;
-                                buffer_type <= W_0FILL;
+                                buffer_type <= W_0FILL;  -- outputs 0-Fill next clock cycle
                                 literal_buffer <= input_buffer(word_size-2 downto 0);
                                 state <= W_NCLITERAL;
                             else
@@ -409,7 +428,7 @@ begin
                                 lfl_literal_buffer <= input_buffer(word_size-2 downto 0);
                                 output_LFL;
                             end if;
-                        elsif(state = W_NCLITERAL) then
+                        elsif(state = W_NCLITERAL) then -- output previous literal and set literal buffer
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 state <= W_NCLITERAL;
                             else
@@ -418,7 +437,7 @@ begin
                             output_Literal;
                             buffer_type <= W_NONE;
                             literal_buffer <= input_buffer(word_size-2 downto 0);
-                        elsif(state = W_1FILL) then
+                        elsif(state = W_1FILL) then -- output previous 1-Fill and set literal buffer
                             if(not is_compressable(word_size, input_buffer(word_size-2 downto 0))) then
                                 state <= W_NCLITERAL;
                             else
@@ -444,8 +463,6 @@ begin
                     buffer_type <= W_0FILL;-- outputs 0-Fill next clock cycle
                 elsif (state = W_1FILL) then
                     output_1Fill;
-                else
-                    --out_wr_loc <= '0';
                 end if;
                 state <= W_NONE;
                 check_final;
