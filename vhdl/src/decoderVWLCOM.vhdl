@@ -342,8 +342,10 @@ begin
                 case buffer_type is
                     when W_0FILL =>
                         handle_F;
+                        handle_next_word(true);
                     when W_LITERAL =>
                         handle_L;
+                        handle_next_word(true);
                     when W_FLF =>
                         handle_FLF;
                     when W_FLF_L =>
